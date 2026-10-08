@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Discord 荒らしツール | All-in-One</title>
+<style>
+  :root{
+    --bg:#0b0d12;--panel:#151922;--line:#252b38;--text:#e6e9ef;
+    --muted:#8b93a5;--accent:#5865f2;--accent2:#4752c4;
+    --ok:#3ba55d;--warn:#faa61a;--danger:#ed4245;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,'Hiragino Kaku Gothic ProN',Meiryo,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;overflow:hidden}
+  #app{display:flex;height:100vh}
+  .sidebar{width:280px;min-width:280px;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;overflow:hidden}
+  .brand{padding:14px 16px;font-weight:800;letter-spacing:1px;color:#fff;border-bottom:1px solid var(--line)}
+  .brand span{color:var(--accent)}
+  .token-box{padding:12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+  input,textarea{background:#0f131b;border:1px solid #2b3243;color:var(--text);border-radius:8px;
+    padding:8px 10px;font-family:inherit;font-size:13px;width:100%;outline:none}
+  input:focus,textarea:focus{border-color:var(--accent)}
+  button{cursor:pointer;border:none;border-radius:8px;padding:9px 12px;background:var(--accent);
+    color:#fff;font-weight:600;font-size:13px;font-family:inherit;margin:2px 0}
+  button:hover{background:var(--accent2)}
+  button.ghost{background:#232937}button.ghost:hover{background:#2d3444}
+  button.danger{background:var(--danger)}button.danger:hover{background:#c93b3e}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .user-card{display:flex;gap:10px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+  .user-card img{width:36px;height:36px;border-radius:50%}
+  .user-card .name{font-weight:600}
+  .user-card .tag{color:var(--muted);font-size:12px}
+  .section-title{padding:8px 14px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+  .list{list-style:none;margin:0;padding:0 8px;overflow-y:auto;max-height:32vh}
+  .list.grow{flex:1;max-height:none}
+  .list li{padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;color:#c3c9d6}
+  .list li:hover{background:#1e2431}
+  .list li.active{background:var(--accent);color:#fff}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:#11151d}
+  .tabs{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+  .tab{background:transparent;color:var(--muted);padding:7px 12px;border-radius:8px;font-weight:600}
+  .tab:hover{background:#1b202b;color:var(--text)}
+  .tab.active{background:var(--accent);color:#fff}
+  .panels{flex:1;overflow-y:auto;padding:20px}
+  .panel{display:none;max-width:760px}.panel.active{display:block}
+  .field{margin-bottom:14px}
+  .field label{display:block;margin-bottom:6px;color:var(--muted);font-size:12px;font-weight:600}
+  .row{display:flex;gap:12px;flex-wrap:wrap}.row .field{flex:1;min-width:110px}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .card h3{margin:0 0 12px;font-size:14px}
+  #logBox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#0f131b;
+    border:1px solid var(--line);border-radius:10px;padding:10px;height:calc(100vh - 210px);overflow-y:auto}
+  .log-line{padding:3px 4px;border-bottom:1px solid #171c26}
+  .log-line.ok{color:var(--ok)}.log-line.warn{color:var(--warn)}
+  .log-line.danger{color:var(--danger)}.log-line.info{color:#c3c9d6}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">DISCORD <span>TOOL</span></div>
+    <div class="token-box">
+      <input id="token" type="password" placeholder="ユーザートークンを貼り付け" />
+      <button id="login">接続</button>
+    </div>
+    <div id="userCard" class="user-card hidden">
+      <img id="userAvatar" alt="" />
+      <div><div class="name" id="userName"></div><div class="tag" id="userTag"></div></div>
+    </div>
+    <div class="section-title">サーバー</div>
+    <ul id="guildList" class="list"></ul>
+    <div class="section-title">チャンネル</div>
+    <ul id="channelList" class="list grow"></ul>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="tabs">
+        <button class="tab active" data-tab="spam">連投</button>
+        <button class="tab" data-tab="react">リアクション</button>
+        <button class="tab" data-tab="del">削除</button>
+        <button class="tab" data-tab="embed">Embed</button>
+        <button class="tab" data-tab="manage">サーバー管理</button>
+        <button class="tab" data-tab="log">ログ</button>
+      </div>
+      <button id="stopBtn" class="danger">停止</button>
+    </div>
+
+    <div class="panels">
+      <section class="panel active" id="panel-spam">
+        <div class="card">
+          <h3>メッセージ連投</h3>
+          <div class="field"><label>送信内容</label>
+            <textarea id="spamContent" rows="3" placeholder="荒らし荒らし荒らし"></textarea></div>
+          <div class="row">
+            <div class="field"><label>回数</label><input id="spamCount" type="number" value="10"></div>
+            <div class="field"><label>間隔 (ms)</label><input id="spamDelay" type="number" value="300"></div>
+          </div>
+          <button id="spamStart">連投開始</button>
+          <button id="typingBtn" class="ghost">タイピング連打</button>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-react">
+        <div class="card">
+          <h3>リアクション連打（最新メッセージ）</h3>
+          <div class="field"><label>絵文字（カスタムは name:id）</label>
+            <input id="reactEmoji" value="🔥" placeholder="🔥"></div>
+          <div class="row">
+            <div class="field"><label>回数</label><input id="reactCount" type="number" value="20"></div>
+            <div class="field"><label>間隔 (ms)</label><input id="reactDelay" type="number" value="60"></div>
+          </div>
+          <button id="reactStart">連打開始</button>
+          <div class="hint">付与→削除を繰り返します。</div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-del">
+        <div class="card">
+          <h3>メッセージ一括削除</h3>
+          <div class="field"><label>削除する件数</label>
+            <input id="delCount" type="number" value="100"></div>
+          <button id="delStart" class="danger">削除開始</button>
+          <div class="hint">古いメッセージ（14日超）は個別削除に自動で切り替わります。</div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-embed">
+        <div class="card">
+          <h3>Embed 送信</h3>
+          <div class="field"><label>本文</label><input id="emContent" placeholder="（任意）"></div>
+          <div class="field"><label>タイトル</label><input id="emTitle" placeholder="タイトル"></div>
+          <div class="field"><label>説明</label><textarea id="emDesc" rows="3"></textarea></div>
+          <div class="field"><label>カラー</label><input id="emColor" type="color" value="#5865f2"></div>
+          <button id="embedSend">送信</button>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-manage">
+        <div class="card">
+          <h3>サーバー名変更</h3>
+          <div class="field"><label>新しい名前</label><input id="guildName" placeholder="新しいサーバー名"></div>
+          <button id="renameBtn">変更</button>
+        </div>
+        <div class="card">
+          <h3>チャンネル一括作成</h3>
+          <div class="row">
+            <div class="field"><label>名前</label><input id="chName" value="ch"></div>
+            <div class="field"><label>個数</label><input id="chCount" type="number" value="5"></div>
+          </div>
+          <button id="createChBtn">作成</button>
+        </div>
+        <div class="card">
+          <h3>一括削除</h3>
+          <button id="delAllChBtn" class="danger">全チャンネル削除</button>
+          <button id="delAllRoleBtn" class="danger">全ロール削除</button>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-log">
+        <div class="card">
+          <h3>ログ</h3>
+          <div id="logBox"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const BASE = 'https://discord.com/api/v10';
+let token = '', me = null, curGuild = null, curChannel = null, stop = false;
+
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function log(msg, type = 'info') {
+  const box = $('#logBox');
+  const el = document.createElement('div');
+  el.className = 'log-line ' + type;
+  el.textContent = `[${new Date().toLocaleTimeString('ja-JP')}] ${msg}`;
+  box.prepend(el);
+  while (box.children.length > 300) box.lastChild.remove();
+}
+
+async function api(path, opts = {}, retry = true) {
+  const res = await fetch(BASE + path, {
+    ...opts,
+    headers: { 'Authorization': token, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+  if (res.status === 429 && retry) {
+    const d = await res.json().catch(() => ({}));
+    await sleep((d.retry_after || 1) * 1000 + 50);
+    return api(path, opts, retry);
+  }
+  if (res.status === 204) return null;
+  if (!res.ok) {
+    let m = 'HTTP ' + res.status;
+    try { const d = await res.json(); m = d.message || m; } catch (e) {}
+    throw new Error(m);
+  }
+  return res.json();
+}
+
+function requireChannel() {
+  if (!curChannel) { log('チャンネルを選択してください', 'warn'); return false; }
+  return true;
+}
+
+/* --- ログイン --- */
+$('#login').onclick = async () => {
+  token = $('#token').value.trim();
+  if (!token) return log('トークンを入力してください', 'warn');
+  try {
+    me = await api('/users/@me');
+    log('ログイン成功: ' + me.username, 'ok');
+    const av = me.avatar
+      ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=64`
+      : `https://cdn.discordapp.com/embed/avatars/${(BigInt(me.id) >> 22n) % 6n}.png`;
+    $('#userAvatar').src = av;
+    $('#userName').textContent = me.global_name || me.username;
+    $('#userTag').textContent = '@' + me.username;
+    $('#userCard').classList.remove('hidden');
+    await loadGuilds();
+  } catch (e) {
+    log('ログイン失敗: ' + e.message, 'danger');
+  }
+};
+
+/* --- ギルド / チャンネル --- */
+async function loadGuilds() {
+  const g = await api('/users/@me/guilds');
+  g.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  const ul = $('#guildList'); ul.innerHTML = '';
+  g.forEach(guild => {
+    const li = document.createElement('li');
+    li.textContent = guild.name;
+    li.onclick = () => selectGuild(guild, li);
+    ul.appendChild(li);
+  });
+  log(`サーバー ${g.length}件`, 'info');
+}
+
+async function selectGuild(guild, li) {
+  curGuild = guild; curChannel = null;
+  document.querySelectorAll('#guildList li').forEach(x => x.classList.remove('active'));
+  li.classList.add('active');
+  const chs = await api(`/guilds/${guild.id}/channels`);
+  const ul = $('#channelList'); ul.innerHTML = '';
+  chs.filter(c => c.type === 0 || c.type === 5).forEach(ch => {
+    const el = document.createElement('li');
+    el.textContent = '# ' + ch.name;
+    el.onclick = () => {
+      curChannel = ch.id;
+      document.querySelectorAll('#channelList li').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      log('選択: #' + ch.name, 'info');
+    };
+    ul.appendChild(el);
+  });
+}
+
+/* --- タブ --- */
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    $('#panel-' + t.dataset.tab).classList.add('active');
+  };
+});
+$('#stopBtn').onclick = () => { stop = true; log('停止フラグON', 'warn'); };
+
+/* --- 連投 --- */
+$('#spamStart').onclick = async () => {
+  if (!requireChannel()) return;
+  stop = false;
+  const content = $('#spamContent').value;
+  const count = +$('#spamCount').value || 1;
+  const delay = +$('#spamDelay').value || 0;
+  log(`連投開始 (${count}回)`, 'ok');
+  for (let i = 0; i < count && !stop; i++) {
+    try { await api(`/channels/${curChannel}/messages`, { method: 'POST', body: JSON.stringify({ content }) }); }
+    catch (e) { log('送信失敗: ' + e.message, 'danger'); }
+    if (delay) await sleep(delay);
+  }
+  log('連投終了', 'ok');
+};
+
+$('#typingBtn').onclick = async () => {
+  if (!requireChannel()) return;
+  for (let i = 0; i < 5; i++) {
+    api(`/channels/${curChannel}/typing`, { method: 'POST' }).catch(() => {});
+    await sleep(8000);
+  }
+  log('タイピング連打 終了', 'ok');
+};
+
+/* --- リアクション --- */
+$('#reactStart').onclick = async () => {
+  if (!requireChannel()) return;
+  stop = false;
+  const emoji = encodeURIComponent($('#reactEmoji').value.trim() || '🔥');
+  const count = +$('#reactCount').value || 1;
+  const delay = +$('#reactDelay').value || 50;
+  const msgs = await api(`/channels/${curChannel}/messages?limit=1`);
+  if (!msgs.length) return log('メッセージがありません', 'warn');
+  const mid = msgs[0].id;
+  log(`リアクション連打 (${count}回)`, 'ok');
+  for (let i = 0; i < count && !stop; i++) {
+    try {
+      await api(`/channels/${curChannel}/messages/${mid}/reactions/${emoji}/@me`, { method: 'PUT' });
+      await api(`/channels/${curChannel}/messages/${mid}/reactions/${emoji}/@me`, { method: 'DELETE' });
+    } catch (e) { log('リアクション失敗: ' + e.message, 'danger'); }
+    if (delay) await sleep(delay);
+  }
+  log('リアクション終了', 'ok');
+};
+
+/* --- 一括削除 --- */
+$('#delStart').onclick = async () => {
+  if (!requireChannel()) return;
+  stop = false;
+  const limit = +$('#delCount').value || 100;
+  let ids = [], before;
+  while (ids.length < limit && !stop) {
+    const q = Math.min(100, limit - ids.length);
+    const batch = await api(`/channels/${curChannel}/messages?limit=${q}${before ? `&before=${before}` : ''}`);
+    if (!batch.length) break;
+    ids.push(...batch.map(m => m.id));
+    before = batch[batch.length - 1].id;
+    if (batch.length < q) break;
+  }
+  log(`取得: ${ids.length}件`, 'info');
+  for (let i = 0; i < ids.length && !stop; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    try {
+      if (chunk.length === 1) await api(`/channels/${curChannel}/messages/${chunk[0]}`, { method: 'DELETE' });
+      else await api(`/channels/${curChannel}/messages/bulk-delete`, { method: 'POST', body: JSON.stringify({ messages: chunk }) });
+    } catch (e) {
+      log('一括失敗→個別削除: ' + e.message, 'warn');
+      for (const id of chunk) { if (stop) break; await api(`/channels/${curChannel}/messages/${id}`, { method: 'DELETE' }).catch(() => {}); }
+    }
+    log(`削除 ${Math.min(i + 100, ids.length)}/${ids.length}`, 'info');
+  }
+  log('削除終了', 'ok');
+};
+
+/* --- Embed --- */
+$('#embedSend').onclick = async () => {
+  if (!requireChannel()) return;
+  const embed = {
+    title: $('#emTitle').value || undefined,
+    description: $('#emDesc').value || undefined,
+    color: parseInt($('#emColor').value.replace('#', ''), 16)
+  };
+  try {
+    await api(`/channels/${curChannel}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content: $('#emContent').value, embeds: [embed] })
+    });
+    log('Embed送信完了', 'ok');
+  } catch (e) { log('Embed失敗: ' + e.message, 'danger'); }
+};
+
+/* --- サーバー管理 --- */
+$('#renameBtn').onclick = async () => {
+  if (!curGuild) return log('サーバー未選択', 'warn');
+  try {
+    await api(`/guilds/${curGuild.id}`, { method: 'PATCH', body: JSON.stringify({ name: $('#guildName').value }) });
+    log('サーバー名を変更', 'ok');
+  } catch (e) { log('変更失敗: ' + e.message, 'danger'); }
+};
+
+$('#createChBtn').onclick = async () => {
+  if (!curGuild) return log('サーバー未選択', 'warn');
+  stop = false;
+  const name = $('#chName').value || 'ch';
+  const count = +$('#chCount').value || 1;
+  for (let i = 0; i < count && !stop; i++) {
+    try { await api(`/guilds/${curGuild.id}/channels`, { method: 'POST', body: JSON.stringify({ name: `${name}-${i + 1}`, type: 0 }) }); }
+    catch (e) { log('作成失敗: ' + e.message, 'danger'); }
+  }
+  log('チャンネル作成 終了', 'ok');
+};
+
+$('#delAllChBtn').onclick = async () => {
+  if (!curGuild) return log('サーバー未選択', 'warn');
+  stop = false;
+  const chs = await api(`/guilds/${curGuild.id}/channels`);
+  for (const c of chs) {
+    if (stop) break;
+    await api(`/channels/${c.id}`, { method: 'DELETE' }).catch(e => log('削除失敗: ' + e.message, 'danger'));
+  }
+  log('全チャンネル削除 終了', 'ok');
+};
+
+$('#delAllRoleBtn').onclick = async () => {
+  if (!curGuild) return log('サーバー未選択', 'warn');
+  stop = false;
+  const roles = await api(`/guilds/${curGuild.id}/roles`);
+  for (const r of roles) {
+    if (stop) break;
+    if (r.id === curGuild.id) continue; // @everyone
+    await api(`/guilds/${curGuild.id}/roles/${r.id}`, { method: 'DELETE' }).catch(e => log('削除失敗: ' + e.message, 'danger'));
+  }
+  log('全ロール削除 終了', 'ok');
+};
+</script>
+</body>
+</html>
