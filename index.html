@@ -58,7 +58,6 @@
   .sec-body{display:flex;flex-direction:column;gap:14px;padding:4px 0 8px}
   .sec.closed .sec-body{display:none}
 
-  /* トグル（スイッチ左・ラベル右） */
   .tg{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
   .tg > span:last-child{color:var(--text);font-size:13px;font-weight:600}
   .switch{position:relative;width:40px;height:23px;flex:none}
@@ -167,7 +166,6 @@ function connectGateway(token) {
   });
 }
 
-/* ================= アイコン ================= */
 const I = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICONS = {
   joiner: I('<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>'),
@@ -188,7 +186,6 @@ const ICONS = {
   report: I('<path d="M5 3v18"/><path d="M5 4h12l-2 4 2 4H5"/>')
 };
 
-/* ================= ツール定義 ================= */
 const TOOLS = [
   { id:'joiner', icon:'joiner', title:'Joiner / Leaver', desc:'大量のアカウントでサーバーの参加・退出を自動化します。',
     fields:[
@@ -382,7 +379,6 @@ const TOOLS = [
     ], run: runReport }
 ];
 
-/* ================= 一覧 ================= */
 function showHome(q = '') {
   $('#toolView').classList.add('hidden');
   const home = $('#home');
@@ -405,7 +401,6 @@ function showHome(q = '') {
   home.querySelectorAll('.card').forEach(c => c.onclick = () => showTool(c.dataset.id));
 }
 
-/* ================= 詳細 ================= */
 function fieldHTML(f) {
   if (f.t === 'helper') return `<div class="helper">${f.text}</div>`;
   if (f.t === 'toggle')
@@ -503,7 +498,6 @@ function getVal(label) {
   return el ? el.value : '';
 }
 
-/* ================= ボタンアクション ================= */
 async function handleBtn(act) {
   const v = collect();
   const tk = parse(v['トークン'])[0];
@@ -559,7 +553,6 @@ async function handleBtn(act) {
   }
 }
 
-/* ================= 各ツール ================= */
 async function runTokenChecker(v) {
   const toks = parse(v['トークン']);
   let ok = 0, bad = 0;
@@ -594,7 +587,6 @@ async function runReaction(v) {
   }
 }
 
-/* --- ランダムライズ --- */
 function mutate(s, adv) {
   if (!s) return s;
   if (adv) return s.split('').map(c => Math.random() < 0.25 ? c.toUpperCase() : c).join('') + '\u200b'.repeat(1 + Math.floor(Math.random() * 3));
