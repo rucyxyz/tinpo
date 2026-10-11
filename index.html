@@ -6,8 +6,8 @@
 <title>ツール一覧</title>
 <style>
   :root{
-    --bg:#1e1f22; --bg2:#2b2d31; --bg3:#313338; --hover:#35373c;
-    --line:#3f4147; --text:#dbdee1; --muted:#949ba4;
+    --bg:#1e1f22; --bg2:#2b2d31; --hover:#35373c; --line:#3f4147;
+    --text:#dbdee1; --muted:#949ba4;
     --blurple:#5865f2; --blurple-h:#4752c4; --red:#da373c; --red-h:#b52a2f;
     --btn-dark:#404249; --btn-dark-h:#4e5058;
   }
@@ -16,7 +16,7 @@
   body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,'Hiragino Kaku Gothic ProN',Meiryo,sans-serif;font-size:14px;line-height:1.5}
   .wrap{max-width:620px;margin:0 auto;padding:32px 16px 64px}
   .hidden{display:none !important}
-  h1.page-title{font-size:22px;font-weight:800;margin:0 0 16px;letter-spacing:.5px;color:#fff}
+  h1.page-title{font-size:22px;font-weight:800;margin:0 0 16px;color:#fff}
 
   .search{width:100%;margin-bottom:18px}
   .search input{background:var(--bg2);border:1px solid var(--line)}
@@ -28,7 +28,6 @@
   .card-icon{flex:none;width:38px;height:38px;border-radius:9px;background:var(--bg);border:1px solid var(--line);
     display:flex;align-items:center;justify-content:center;color:var(--blurple)}
   .card-icon svg{width:21px;height:21px}
-  .card-body{min-width:0}
   .card-title{font-weight:700;color:#fff;margin-bottom:3px}
   .card-desc{color:var(--muted);font-size:13px}
   .empty{color:var(--muted);text-align:center;padding:40px 0}
@@ -48,6 +47,13 @@
   textarea{resize:vertical}
   .inline input,.inline textarea,.inline select{flex:1;width:auto}
   .inline input[type=number]{max-width:120px}
+
+  .sec{border-top:1px solid var(--line);padding-top:4px}
+  .sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;font-size:13px;padding:8px 0;user-select:none}
+  .sec-head .arrow{font-size:10px;color:var(--muted);transition:transform .15s}
+  .sec.closed .arrow{transform:rotate(-90deg)}
+  .sec-body{display:flex;flex-direction:column;gap:14px;padding:4px 0 8px}
+  .sec.closed .sec-body{display:none}
 
   .tg{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
   .tg > span:last-child{color:var(--text);font-size:13px;font-weight:600}
@@ -77,9 +83,11 @@
   .btn-sm:hover{background:var(--blurple-h)}
   .btn-full{background:var(--blurple);color:#fff;width:100%;font-size:13px;padding:10px}
   .btn-full:hover{background:var(--blurple-h)}
-  .run-row{display:flex;gap:12px;margin-top:12px}
-  .btn-stop{background:var(--red);color:#fff;flex:1}
-  .btn-stop:hover{background:var(--red-h)}
+  .btn-row{display:flex;gap:12px;margin-top:12px}
+  .btn-b{flex:1;color:#fff}
+  .btn-blue{background:var(--blurple)}.btn-blue:hover{background:var(--blurple-h)}
+  .btn-red{background:var(--red)}.btn-red:hover{background:var(--red-h)}
+  .btn-dark{background:var(--btn-dark)}.btn-dark:hover{background:var(--btn-dark-h)}
 
   .logbox{background:#141517;border:1px solid var(--line);border-radius:8px;padding:10px;
     height:180px;overflow-y:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;margin-top:16px}
@@ -96,6 +104,9 @@
 <script>
 const BASE = 'https://discord.com/api/v10';
 let STOP = false;
+let vcGateways = [];     // {token, gw} 常駐VC用
+let statusGw = null;     // ステータス常駐用
+let lastGroupId = null;  // 直近に作成したグループDM
 
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -165,7 +176,7 @@ const ICONS = {
   group: I('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M15 20a5 5 0 0 1 6-4.6"/>'),
   raider: I('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'),
   friend: I('<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M18 8v6M15 11h6"/>'),
-  nickavatar: I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/>'),
+  profile: I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/>'),
   thread: I('<path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/>'),
   invite: I('<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>'),
   vc: I('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>'),
@@ -180,32 +191,35 @@ const ICONS = {
 };
 
 /* ================= ツール定義 ================= */
+const REPORT_TYPES = ['指定なし','迷惑メール','なりすまし','メンションスパム','広告','その他'];
+const ACTIVITY_TYPES = ['Playing','Streaming','Listening','Watching','Competing','Custom'];
+
 const TOOLS = [
   { id:'joiner', icon:'joiner', title:'Joiner / Leaver', desc:'大量のアカウントでサーバーの参加・退出を自動化します。',
-    buttons:[ {label:'参加', kind:'run'}, {label:'退出', kind:'act', act:'leaveServer'}, {label:'停止', kind:'stop'} ],
+    buttonsRow:true,
+    buttons:[ {label:'参加', kind:'run', color:'blue'}, {label:'退出', kind:'act', act:'leaveServer', color:'blue'} ],
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'招待リンク または サーバーID', ph:'https://discord.gg/xxxx'},
-      {t:'num', label:'上限', val:0, unit:'人'},
-      {t:'toggle', label:'参加後に自動退出'},
-      {t:'toggle', label:'ランダム間隔'}
+      {t:'toggle', label:'参加後に自動退出'}
     ], run: runJoiner },
 
-  { id:'group', icon:'group', title:'Group DM Spammer', desc:'グループDMを大量作成してメッセージをスパム、最後に一括退出します。',
-    buttons:[ {label:'参加', kind:'run'}, {label:'退出', kind:'act', act:'leaveGroups'}, {label:'停止', kind:'stop'} ],
+  { id:'group', icon:'group', title:'Group DM Spammer', desc:'グループDMを大量作成してメッセージを送信します。',
+    buttonsRow:true,
+    buttons:[ {label:'グループ作成', kind:'run', color:'blue'}, {label:'ユーザー追加', kind:'act', act:'addToGroup', color:'blue'} ],
     fields:[
-      {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
-      {t:'area', label:'相手のユーザーID'},
+      {t:'area', label:'ユーザーID', ph:'カンマ / 改行 / スペースで区切る'},
+      {t:'text', label:'グループ名', ph:'グループ名'},
+      {t:'text', label:'アイコン画像URL', ph:'https://.../icon.png'},
       {t:'area', label:'メッセージ内容'},
-      {t:'num', label:'送信回数', val:1},
-      {t:'toggle', label:'作成後に退出'}
+      {t:'num', label:'送信回数', val:1}
     ], run: runGroup },
 
   { id:'raider', icon:'raider', title:'Raider', desc:'大量アカウントでメッセージを高速連投し、チャンネルを埋め尽くします。',
     buttons:[
-      { label:'実行', kind:'run' },
-      { label:'スパム停止', kind:'stop' },
-      { label:'サーバー退出', kind:'act', act:'leaveGuild' }
+      { label:'実行', kind:'run', color:'dark' },
+      { label:'スパム停止', kind:'stop', color:'red' },
+      { label:'サーバー退出', kind:'act', act:'leaveGuild', color:'red' }
     ],
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る\nMTM1ODc4MTE3NTIzM...****, MTEwMD...'},
@@ -213,42 +227,53 @@ const TOOLS = [
       {t:'area', label:'チャンネルID', ph:'カンマ / 改行 / スペースで区切る\n123456789012345678,123456789012345678,...'},
       {t:'btn', label:'チャンネル自動取得', act:'fetchChannels', style:'sm'},
       {t:'area', label:'メッセージ内容', ph:'送信するメッセージを入力'},
-      {t:'toggles', items:['メッセージのランダムライズ','高度なランダムライズ']},
+      {t:'toggles', items:['メッセージのランダマイズ','高度なランダマイズ']},
       {t:'nums', items:[{label:'メッセージ送信間隔', val:0, unit:'秒'},{label:'メッセージ送信上限', val:0, unit:'回'}]},
+      {t:'section', label:'メンション設定'},
       {t:'area', label:'メンションするユーザーID', ph:'カンマ / 改行 / スペースで区切る\n123456789012345678,123456789012345678'},
       {t:'btn', label:'メンション自動取得', act:'fetchMentions', style:'full'},
       {t:'text', label:'メンション取得用チャンネルID', ph:'空の場合はメインのチャンネルID[0]を使用'},
       {t:'inlinebtn', label:'取得する人数', val:100, unit:'人', btn:'総数取得', act:'fetchAllMentions'},
       {t:'inlinebtn', label:'ランダムメンションする人数', val:1, unit:'人'},
+      {t:'section', label:'投票設定'},
       {t:'text', label:'投票 タイトル', ph:'投票タイトル'},
       {t:'area', label:'投票 選択肢', ph:'カンマ / 改行 / スペースで区切る  選択肢1,選択肢2,...'},
       {t:'toggle', label:'投票を強制終了'},
-      {t:'text', label:'転送するメッセージURL / ID', ph:'https://discord.com/channels/.../.../... または メッセージID'},
+      {t:'section', label:'メッセージ転送設定'},
+      {t:'text', label:'転送するメッセージURL', ph:'https://discord.com/channels/123456789012345678/123456789012345678/123456789012345678'},
+      {t:'section', label:'リプライ設定'},
       {t:'toggle', label:'リプライを有効にする'},
       {t:'inlinebtn', label:'取得件数', val:20, unit:'件', btn:'履歴取得', act:'fetchHistory'},
       {t:'select', label:'リプライ先メッセージ（手動選択）', ph:'-- 履歴を取得してから選択 --', options:[]},
+      {t:'section', label:'オンボーディング / 認証設定'},
       {t:'toggle', label:'オンボーディング & 認証を自動解決'},
       {t:'helper', text:'有効にすると、スパム実行前に全アカウントのオンボーディングと認証を自動で完了します。サーバーの回答は1回だけ取得してキャッシュし、全アカウントで使い回します。'}
     ], run: runRaider },
 
-  { id:'friend', icon:'friend', title:'Friend / DM', desc:'フレンド申請とDM送信を自動化します。複数ユーザーへ一括で送れます。',
+  { id:'dm', icon:'friend', title:'DM Spammer', desc:'フレンド申請とDM送信を自動化します。サーバーIDを入れると全メンバーに送信できます。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
-      {t:'area', label:'ユーザーID'},
+      {t:'text', label:'サーバーID', ph:'123456789012345678（全メンバーに送る場合）'},
+      {t:'area', label:'ユーザーID', ph:'（サーバーID入力時は省略可）'},
       {t:'toggle', label:'フレンド申請を送る'},
       {t:'toggle', label:'DMを送る'},
       {t:'area', label:'DMメッセージ'}
-    ], run: runFriend },
+    ], run: runDmSpammer },
 
-  { id:'nickavatar', icon:'nickavatar', title:'Nick / Avatar', desc:'ニックネームとプロフィールアイコンを一括変更します。',
+  { id:'profile', icon:'profile', title:'Profile Changer', desc:'自己紹介・ステータスメッセージ・ギルドタグ・ニックネーム・アイコンを一括変更します。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
-      {t:'text', label:'サーバーID', ph:'123456789012345678'},
-      {t:'text', label:'新しいニックネーム'},
-      {t:'text', label:'アイコン画像URL', ph:'https://.../icon.png'}
-    ], run: runNickAvatar },
+      {t:'text', label:'表示名', ph:'グローバル表示名'},
+      {t:'area', label:'自己紹介', ph:'プロフィールの自己紹介文'},
+      {t:'text', label:'アイコン画像URL', ph:'https://.../icon.png'},
+      {t:'text', label:'カスタムステータス', ph:'おやすみ'},
+      {t:'text', label:'サーバーID（ニックネーム用）', ph:'123456789012345678'},
+      {t:'text', label:'ニックネーム', ph:'ニックネーム'},
+      {t:'text', label:'ギルドタグ サーバーID', ph:'123456789012345678'},
+      {t:'text', label:'ギルドタグ 文字列', ph:'TAG'}
+    ], run: runProfile },
 
-  { id:'thread', icon:'thread', title:'Thread / Forum', desc:'テキストチャンネルやフォーラムにスレッドを連続作成します。',
+  { id:'thread', icon:'thread', title:'Thread Spammer', desc:'テキストチャンネルやフォーラムにスレッドを連続作成します。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'チャンネルID', ph:'123456789012345678'},
@@ -260,20 +285,23 @@ const TOOLS = [
   { id:'invite', icon:'invite', title:'Invite Generator', desc:'上限が埋まるまで招待リンクを大量生成します。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
-      {t:'text', label:'チャンネルID', ph:'123456789012345678'},
+      {t:'text', label:'サーバーID', ph:'123456789012345678'},
       {t:'num', label:'生成数', val:50, unit:'件'},
       {t:'toggle', label:'無限に生成'}
     ], run: runInvite },
 
-  { id:'vc', icon:'vc', title:'VC Spammer', desc:'ボイスチャンネルへ参加・退出を連打します（Gateway接続）。',
+  { id:'vc', icon:'vc', title:'VC Spammer', desc:'ボイスチャンネルへ参加・退出を連打します。参加したまま居続けられます。',
+    buttonsRow:true,
+    buttons:[ {label:'参加', kind:'run', color:'blue'}, {label:'退出', kind:'act', act:'vcLeave', color:'red'} ],
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'サーバーID', ph:'123456789012345678'},
       {t:'text', label:'ボイスチャンネルID', ph:'123456789012345678'},
+      {t:'toggle', label:'繰り返し（参加⇄退出を連打）'},
       {t:'num', label:'繰り返し回数', val:10}
     ], run: runVc },
 
-  { id:'tokenchecker', icon:'tokenchecker', title:'Token Checker', desc:'トークンを入力してアカウントの有効性を一括チェックします。',
+  { id:'tokenchecker', icon:'tokenchecker', title:'Token Checker', desc:'トークンの有効性・ニトロ・制限を一括チェックします。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'toggle', label:'アカウント情報を表示'}
@@ -284,25 +312,29 @@ const TOOLS = [
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'チャンネルID', ph:'123456789012345678'},
       {t:'text', label:'コマンド名', ph:'ping'},
-      {t:'num', label:'実行回数', val:10}
+      {t:'num', label:'実行回数', val:10},
+      {t:'toggle', label:'ボイスチャンネルを含める'}
     ], run: runSlash },
 
   { id:'reaction', icon:'reaction', title:'Reaction Spammer', desc:'メッセージにリアクションを大量付与します。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
+      {t:'text', label:'サーバーID', ph:'123456789012345678'},
       {t:'text', label:'チャンネルID', ph:'123456789012345678'},
+      {t:'btn', label:'全チャンネル取得', act:'fetchAllChannels', style:'sm'},
       {t:'text', label:'メッセージID', ph:'空欄なら最新メッセージ'},
-      {t:'text', label:'絵文字', ph:'🔥 / name:id'},
+      {t:'text', label:'絵文字', ph:'🔥 / ピリオド区切りで複数 / ニトロ絵文字は name:id'},
       {t:'num', label:'回数', val:20},
-      {t:'num', label:'間隔', val:50, unit:'ms'}
+      {t:'num', label:'間隔', val:50, unit:'ms'},
+      {t:'toggle', label:'古いメッセージからリアクションする'}
     ], run: runReaction },
 
   { id:'webhook', icon:'webhook', title:'Webhook Spammer', desc:'Webhookを作成して大量送信し、最後に削除します。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
-      {t:'text', label:'チャンネルID', ph:'123456789012345678'},
-      {t:'text', label:'Webhook名', ph:'spam'},
-      {t:'area', label:'メッセージ内容'},
+      {t:'text', label:'サーバーID', ph:'123456789012345678'},
+      {t:'text', label:'Webhook Name', ph:'Captain Hook'},
+      {t:'area', label:'メッセージ内容', val:'@everyone'},
       {t:'num', label:'送信回数', val:10},
       {t:'toggle', label:'終了後にWebhookを削除'}
     ], run: runWebhook },
@@ -310,6 +342,7 @@ const TOOLS = [
   { id:'button', icon:'button', title:'Button Pusher', desc:'メッセージのボタン・セレクトメニューを自動クリックします。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
+      {t:'text', label:'サーバーID', ph:'123456789012345678'},
       {t:'text', label:'チャンネルID', ph:'123456789012345678'},
       {t:'text', label:'メッセージID', ph:'123456789012345678'},
       {t:'text', label:'ボタン番号', ph:'1,2,3（左から・空欄で全部）'},
@@ -319,25 +352,43 @@ const TOOLS = [
   { id:'hypesquad', icon:'hypesquad', title:'HypeSquad Changer', desc:'HypeSquadバッジを一括で変更します。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
-      {t:'select', label:'ハウス', options:['Bravery','Brilliance','Balance','離脱']}
+      {t:'select', label:'ハウス', options:['Bravery','Brilliance','Balance','None']}
     ], run: runHypeSquad },
 
-  { id:'status', icon:'status', title:'Status Setter', desc:'ステータス・アクティビティを一括設定します（Gateway接続）。',
+  { id:'status', icon:'status', title:'Status Setter', desc:'アクティビティ・ステータスを一括設定します。',
+    buttons:[
+      {label:'Start', kind:'run', color:'blue'},
+      {label:'Stop', kind:'act', act:'statusStop', color:'red'},
+      {label:'Preview', kind:'act', act:'statusPreview', color:'dark'},
+      {label:'Reset', kind:'act', act:'statusReset', color:'dark'}
+    ], buttonsRow:true,
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
-      {t:'text', label:'ステータステキスト', ph:'おやすみ'},
-      {t:'select', label:'状態', options:['online','idle','dnd','invisible']}
-    ], run: runStatus },
+      {t:'select', label:'Activity Type', options:ACTIVITY_TYPES},
+      {t:'text', label:'Activity Name', ph:'作業中'},
+      {t:'text', label:'State', ph:'ステータス'},
+      {t:'text', label:'Details', ph:'詳細'},
+      {t:'text', label:'Stream URL', ph:'https://twitch.tv/...'},
+      {t:'toggle', label:'Action Button'},
+      {t:'text', label:'Button 1 ラベル', ph:'ボタン名'},
+      {t:'text', label:'Button 2 ラベル', ph:'ボタン名'},
+      {t:'nums', items:[{label:'Party Size', val:0, unit:''},{label:'Party Max', val:0, unit:''}]},
+      {t:'nums', items:[{label:'Timestamps Start', val:0, unit:''},{label:'Timestamps End', val:0, unit:''}]},
+      {t:'helper', text:'Timestamps は Unix 秒で入力（0で無効）。Preview で送信内容を確認できます。'}
+    ], run: runStatusStart },
 
-  { id:'report', icon:'report', title:'Mass Report', desc:'複数トークンでメッセージを一括通報します。',
+  { id:'report', icon:'report', title:'Mass Reporter', desc:'複数トークンでメッセージを一括通報します。',
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'チャンネルID', ph:'123456789012345678'},
-      {t:'text', label:'メッセージID', ph:'123456789012345678'}
+      {t:'text', label:'ユーザーID', ph:'（指定するとその人のメッセージのみ取得）'},
+      {t:'inlinebtn', label:'取得件数', val:20, unit:'件', btn:'取得', act:'fetchMessages'},
+      {t:'text', label:'メッセージID', ph:'123456789012345678'},
+      {t:'select', label:'通報タイプ', options:REPORT_TYPES}
     ], run: runReport }
 ];
 
-/* ================= ルーター（マルチページ） ================= */
+/* ================= ルーター ================= */
 function route() {
   const id = location.hash.replace(/^#\/?/, '');
   if (!id || !TOOLS.some(t => t.id === id)) showHome();
@@ -391,11 +442,40 @@ function fieldHTML(f) {
   }
   const unit = f.unit ? `<span class="unit">${f.unit}</span>` : '';
   const input = f.t === 'area'
-    ? `<textarea data-label="${f.label}" rows="3" placeholder="${f.ph || ''}"></textarea>`
+    ? `<textarea data-label="${f.label}" rows="3" placeholder="${f.ph || ''}">${f.val || ''}</textarea>`
     : f.t === 'num'
       ? `<input type="number" data-label="${f.label}" value="${f.val ?? 0}">`
-      : `<input data-label="${f.label}" placeholder="${f.ph || ''}">`;
+      : `<input data-label="${f.label}" placeholder="${f.ph || ''}" value="${f.val || ''}">`;
   return `<div class="field"><label>${f.label}</label><div class="inline">${input}${unit}</div></div>`;
+}
+
+function renderForm(fields) {
+  let html = '', open = false;
+  const flush = () => { if (open) html += '</div></div>'; };
+  for (const f of fields) {
+    if (f.t === 'section') {
+      flush();
+      html += `<div class="sec"><div class="sec-head"><span class="arrow">▼</span>${f.label}</div><div class="sec-body">`;
+      open = true;
+    } else html += fieldHTML(f);
+  }
+  flush();
+  return html;
+}
+
+function renderButtons(t) {
+  const btns = t.buttons || [{label:'実行',kind:'run',color:'dark'},{label:'停止',kind:'stop',color:'red'}];
+  const mk = b => {
+    const color = b.color || (b.kind === 'stop' ? 'red' : (b.kind === 'run' ? 'dark' : 'blue'));
+    const id = b.kind === 'run' ? ' id="runBtn"' : (b.kind === 'stop' ? ' id="stopBtn"' : '');
+    const act = b.act ? ` data-act="${b.act}"` : '';
+    return `<button class="btn-b btn-${color}"${id}${act}>${b.label}</button>`;
+  };
+  if (t.buttonsRow) return `<div class="btn-row" style="margin-top:22px">${btns.map(mk).join('')}</div>`;
+  const run = btns.find(b => b.kind === 'run');
+  const rest = btns.filter(b => b.kind !== 'run');
+  return (run ? `<button class="btn-run" id="runBtn">${run.label}</button>` : '') +
+    (rest.length ? `<div class="btn-row">${rest.map(mk).join('')}</div>` : '');
 }
 
 function showTool(id) {
@@ -404,35 +484,24 @@ function showTool(id) {
   $('#home').classList.add('hidden');
   const view = $('#toolView');
   view.classList.remove('hidden');
-
-  const btns = t.buttons || [{ label: '実行', kind: 'run' }, { label: '停止', kind: 'stop' }];
-  const runBtn = btns.find(b => b.kind === 'run');
-  const rest = btns.filter(b => b.kind !== 'run');
-  const restHTML = rest.length
-    ? `<div class="run-row">` + rest.map(b =>
-        b.kind === 'stop'
-          ? `<button class="btn-stop" id="stopBtn">${b.label}</button>`
-          : `<button class="btn-stop" data-act="${b.act}">${b.label}</button>`).join('') + `</div>`
-    : '';
-
   view.innerHTML = `
     <button class="back" id="backBtn">← ツール一覧</button>
     <h1 class="detail-title">${t.title}</h1>
     <p class="detail-desc">${t.desc}</p>
-    <div class="form" id="toolForm">${t.fields.map(fieldHTML).join('')}</div>
-    <button class="btn-run" id="runBtn">${runBtn.label}</button>
-    ${restHTML}
+    <div class="form" id="toolForm">${renderForm(t.fields)}</div>
+    ${renderButtons(t)}
     <div class="logbox" id="logBox"></div>`;
 
   $('#backBtn').onclick = () => { location.hash = '#/'; };
   const sb = $('#stopBtn'); if (sb) sb.onclick = () => { STOP = true; log('停止', 'warn'); };
-  $('#runBtn').onclick = async () => {
-    STOP = false; $('#runBtn').disabled = true;
+  const rb = $('#runBtn'); if (rb) rb.onclick = async () => {
+    STOP = false; rb.disabled = true;
     const v = collect(); log('実行開始', 'info');
     try { await t.run(v); log('実行終了', 'ok'); }
     catch (e) { log('エラー: ' + e.message, 'danger'); }
-    $('#runBtn').disabled = false;
+    rb.disabled = false;
   };
+  view.querySelectorAll('.sec-head').forEach(h => h.onclick = () => h.parentElement.classList.toggle('closed'));
   view.querySelectorAll('[data-act]').forEach(b => b.onclick = () => handleBtn(b.dataset.act));
   window.scrollTo(0, 0);
 }
@@ -448,6 +517,10 @@ function setVal(label, val) {
   const el = document.querySelector(`#toolForm [data-label="${label}"]`);
   if (el) el.value = val;
 }
+async function firstTextChannel(gid, tk) {
+  const chs = await dapi(`/guilds/${gid}/channels`, tk);
+  return chs.find(c => c.type === 0);
+}
 
 /* ================= ボタンアクション ================= */
 async function handleBtn(act) {
@@ -460,9 +533,18 @@ async function handleBtn(act) {
     if (!gid) return log('サーバーIDを入力してください', 'warn');
     try {
       const chs = await dapi(`/guilds/${gid}/channels`, tk);
-      const ids = chs.filter(c => c.type === 0 || c.type === 5).map(c => c.id);
-      setVal('チャンネルID', ids.join('\n'));
-      log(`チャンネル ${ids.length}件 取得`, 'ok');
+      setVal('チャンネルID', chs.filter(c => c.type === 0 || c.type === 5).map(c => c.id).join('\n'));
+      log('チャンネル取得', 'ok');
+    } catch (e) { log('取得失敗: ' + e.message, 'danger'); }
+  }
+
+  if (act === 'fetchAllChannels') {
+    const gid = v['サーバーID'];
+    if (!gid) return log('サーバーIDを入力してください', 'warn');
+    try {
+      const chs = await dapi(`/guilds/${gid}/channels`, tk);
+      setVal('チャンネルID', chs.filter(c => c.type === 0 || c.type === 5).map(c => c.id).join('\n'));
+      log(`全チャンネル ${chs.length}件 取得`, 'ok');
     } catch (e) { log('取得失敗: ' + e.message, 'danger'); }
   }
 
@@ -470,8 +552,7 @@ async function handleBtn(act) {
     const ch = v['メンション取得用チャンネルID'] || parse(v['チャンネルID'])[0];
     if (!ch) return log('チャンネルIDが必要', 'warn');
     const n = act === 'fetchAllMentions' ? 0 : (+v['取得する人数'] || 100);
-    const ids = new Set();
-    let before;
+    const ids = new Set(); let before;
     while (!STOP) {
       if (n && ids.size >= n) break;
       const q = n ? Math.min(100, n - ids.size) : 100;
@@ -488,23 +569,25 @@ async function handleBtn(act) {
   if (act === 'fetchHistory') {
     const ch = parse(v['チャンネルID'])[0];
     if (!ch) return log('チャンネルIDが必要', 'warn');
-    const n = +v['取得件数'] || 20;
-    const batch = await dapi(`/channels/${ch}/messages?limit=${n}`, tk);
+    const batch = await dapi(`/channels/${ch}/messages?limit=${+v['取得件数'] || 20}`, tk);
     const sel = document.querySelector(`#toolForm [data-label="リプライ先メッセージ（手動選択）"]`);
     sel.innerHTML = `<option value="">-- 選択してください --</option>` +
       batch.map(m => `<option value="${m.id}">${(m.author?.username || '?')}: ${(m.content || '').slice(0, 40) || '[添付]'}</option>`).join('');
     log(`履歴 ${batch.length}件 取得`, 'ok');
   }
 
-  if (act === 'leaveGuild') {
-    const gid = v['サーバーID'];
-    for (const t of parse(v['トークン'])) {
-      try { await dapi(`/users/@me/guilds/${gid}`, t, { method: 'DELETE' }); log('退出', 'ok'); }
-      catch (e) { log('失敗: ' + e.message, 'danger'); }
-    }
+  if (act === 'fetchMessages') {
+    const ch = v['チャンネルID'];
+    if (!ch) return log('チャンネルIDが必要', 'warn');
+    const uidf = (v['ユーザーID'] || '').trim();
+    let batch = await dapi(`/channels/${ch}/messages?limit=${+v['取得件数'] || 20}`, tk);
+    if (uidf) batch = batch.filter(m => m.author && m.author.id === uidf);
+    if (!batch.length) return log('該当メッセージなし', 'warn');
+    setVal('メッセージID', batch[0].id);
+    log(`メッセージ取得: ${batch.length}件 (最新をIDにセット)`, 'ok');
   }
 
-  if (act === 'leaveServer') {
+  if (act === 'leaveGuild' || act === 'leaveServer') {
     const toks = parse(v['トークン']);
     let gid = (v['サーバーID'] || '').trim();
     if (!gid) {
@@ -519,35 +602,56 @@ async function handleBtn(act) {
     }
   }
 
-  if (act === 'leaveGroups') {
-    for (const t of parse(v['トークン'])) {
-      try {
-        const chs = await dapi('/users/@me/channels', t);
-        const groups = chs.filter(c => c.type === 3);
-        for (const c of groups) await dapi(`/channels/${c.id}`, t, { method: 'DELETE' }).catch(() => {});
-        log(`グループ退出 (${groups.length})`, 'ok');
-      } catch (e) { log('失敗: ' + e.message, 'danger'); }
+  if (act === 'addToGroup') {
+    if (!lastGroupId) return log('先にグループを作成してください', 'warn');
+    for (const u of parse(v['ユーザーID'])) {
+      try { await dapi(`/channels/${lastGroupId}/recipients/${u}`, tk, { method: 'PUT', body: '{}' }); log('追加: ' + u, 'ok'); }
+      catch (e) { log('失敗: ' + e.message, 'danger'); }
     }
+  }
+
+  if (act === 'vcLeave') {
+    for (const item of vcGateways) item.gw.send(4, { guild_id: v['サーバーID'], channel_id: null });
+    log('VC退出', 'ok');
+  }
+
+  if (act === 'statusPreview') {
+    const actObj = buildActivity(v);
+    log('Preview: ' + JSON.stringify(actObj), 'info');
+  }
+  if (act === 'statusReset') {
+    ['Activity Name','State','Details','Stream URL','Button 1 ラベル','Button 2 ラベル'].forEach(l => setVal(l, ''));
+    ['Party Size','Party Max','Timestamps Start','Timestamps End'].forEach(l => setVal(l, 0));
+    log('リセット', 'info');
+  }
+  if (act === 'statusStop') {
+    if (statusGw) { statusGw.send(3, { status: 'invisible', activities: [], since: 0, afk: false }); statusGw.close(); statusGw = null; }
+    log('Stop', 'ok');
   }
 }
 
 /* ================= 各ツール ================= */
 async function runTokenChecker(v) {
   const toks = parse(v['トークン']);
-  let ok = 0, bad = 0;
+  let ok = 0, bad = 0, nitro = 0, lim = 0;
   for (const t of toks) {
     try {
       const u = await dapi('/users/@me', t);
-      log('有効: ' + u.username + (v['アカウント情報を表示'] ? ` (ID:${u.id})` : ''), 'ok'); ok++;
-    } catch (e) { log('無効: ' + t.slice(0, 14) + '...', 'danger'); bad++; }
+      if (u.premium_type && u.premium_type > 0) { log('ニトロ: ' + u.username, 'ok'); nitro++; }
+      else log('有効: ' + u.username + (v['アカウント情報を表示'] ? ` (ID:${u.id})` : ''), 'ok');
+      ok++;
+    } catch (e) {
+      if (/429|rate/i.test(e.message)) { log('制限: ' + t.slice(0, 12), 'warn'); lim++; }
+      else { log('無効: ' + t.slice(0, 12), 'danger'); bad++; }
+    }
   }
-  log(`結果 → 有効 ${ok} / 無効 ${bad}`, 'info');
+  log(`結果 → 有効 ${ok} / 無効 ${bad} / ニトロ ${nitro} / 制限 ${lim}`, 'info');
 }
 
 async function runReaction(v) {
   const toks = parse(v['トークン']);
   const ch = v['チャンネルID'];
-  const emoji = encodeURIComponent(v['絵文字'] || '🔥');
+  const emojis = (v['絵文字'] || '🔥').split('.').map(s => s.trim()).filter(Boolean).map(encodeURIComponent);
   const count = +v['回数'] || 1, delay = +v['間隔'] || 0;
   let mid = v['メッセージID'];
   if (!mid) {
@@ -557,10 +661,12 @@ async function runReaction(v) {
   }
   for (let i = 0; i < count && !STOP; i++) {
     for (const tk of toks) {
-      try {
-        await dapi(`/channels/${ch}/messages/${mid}/reactions/${emoji}/@me`, tk, { method: 'PUT' });
-        await dapi(`/channels/${ch}/messages/${mid}/reactions/${emoji}/@me`, tk, { method: 'DELETE' });
-      } catch (e) {}
+      for (const emoji of emojis) {
+        try {
+          await dapi(`/channels/${ch}/messages/${mid}/reactions/${emoji}/@me`, tk, { method: 'PUT' });
+          await dapi(`/channels/${ch}/messages/${mid}/reactions/${emoji}/@me`, tk, { method: 'DELETE' });
+        } catch (e) {}
+      }
     }
     if (delay) await sleep(delay);
   }
@@ -583,12 +689,8 @@ async function resolveOnboarding(tokens, guildId) {
     try {
       const ob = guild.onboarding;
       if (ob && ob.prompts && ob.prompts.length) {
-        const prompts = ob.prompts.map(p => ({
-          id: p.id, options: p.options.map(o => o.id), completed: true, in_onboarding: true, type: p.type
-        }));
-        await dapi(`/guilds/${guildId}/onboarding`, tk, { method: 'PUT', body: JSON.stringify({
-          prompts, default_channel_ids: ob.default_channel_ids || [], enabled: true, mode: ob.mode ?? 0
-        })});
+        const prompts = ob.prompts.map(p => ({ id: p.id, options: p.options.map(o => o.id), completed: true, in_onboarding: true, type: p.type }));
+        await dapi(`/guilds/${guildId}/onboarding`, tk, { method: 'PUT', body: JSON.stringify({ prompts, default_channel_ids: ob.default_channel_ids || [], enabled: true, mode: ob.mode ?? 0 }) });
         log('オンボーディング解決', 'ok');
       }
       const ms = guild.membership_screening;
@@ -596,7 +698,7 @@ async function resolveOnboarding(tokens, guildId) {
         const fields = {};
         ms.form_fields.forEach(f => { fields[f.field_type] = (f.values && f.values[0]) || f.value || ''; });
         await dapi(`/guilds/${guildId}/requests/@me`, tk, { method: 'PUT', body: JSON.stringify({ form_fields: fields, version: ms.version }) });
-        log('認証（メンバーシップ審査）解決', 'ok');
+        log('認証解決', 'ok');
       }
     } catch (e) { log('オンボーディング失敗: ' + e.message, 'danger'); }
     gw.close();
@@ -610,28 +712,24 @@ async function runRaider(v) {
   const base = v['メッセージ内容'] || '';
   const delay = (+v['メッセージ送信間隔'] || 0) * 1000;
   const limit = +v['メッセージ送信上限'] || 0;
-  const rand = v['メッセージのランダムライズ'];
-  const adv = v['高度なランダムライズ'];
+  const rand = v['メッセージのランダマイズ'];
+  const adv = v['高度なランダマイズ'];
   const pool = parse(v['メンションするユーザーID']);
   const randN = +v['ランダムメンションする人数'] || 0;
   const pollTitle = v['投票 タイトル'];
   const pollOpts = parse(v['投票 選択肢']);
   const pollEnd = v['投票を強制終了'];
-  const fwd = (v['転送するメッセージURL / ID'] || '').trim();
+  const fwd = (v['転送するメッセージURL'] || '').trim();
   const replyOn = v['リプライを有効にする'];
   const replyId = v['リプライ先メッセージ（手動選択）'];
 
-  if (v['オンボーディング & 認証を自動解決'] && guildId) {
-    log('オンボーディング / 認証を解決中...', 'info');
-    await resolveOnboarding(toks, guildId);
-  }
+  if (v['オンボーディング & 認証を自動解決'] && guildId) { log('オンボーディング / 認証を解決中...', 'info'); await resolveOnboarding(toks, guildId); }
 
   let n = 0;
   outer:
   for (const tk of toks) {
     for (const ch of chs) {
       if (STOP || (limit && n >= limit)) break outer;
-
       let mentions = '';
       if (pool.length) {
         const shuffled = [...pool].sort(() => Math.random() - 0.5);
@@ -639,22 +737,13 @@ async function runRaider(v) {
         mentions = pick.map(id => `<@${id}>`).join(' ');
       }
       const content = (mentions ? mentions + ' ' : '') + (rand || adv ? mutate(base, adv) : base);
-
       const payload = { content };
       if (pollTitle && pollOpts.length)
         payload.poll = { question: { text: pollTitle }, answers: pollOpts.map(o => ({ poll_media: { text: o } })), duration: 24, allow_multiselect: false };
       if (fwd) {
-        if (fwd.includes('/')) {
-          const p = fwd.split('/');
-          const mid = p.pop(), cid = p.pop();
-          payload.message_reference = { message_id: mid, channel_id: cid, type: 1 };
-        } else {
-          payload.message_reference = { message_id: fwd, channel_id: chs[0], type: 1 };
-        }
-      } else if (replyOn && replyId) {
-        payload.message_reference = { message_id: replyId, type: 0 };
-      }
-
+        if (fwd.includes('/')) { const p = fwd.split('/'); const mid = p.pop(), cid = p.pop(); payload.message_reference = { message_id: mid, channel_id: cid, type: 1 }; }
+        else payload.message_reference = { message_id: fwd, channel_id: chs[0], type: 1 };
+      } else if (replyOn && replyId) payload.message_reference = { message_id: replyId, type: 0 };
       try {
         const sent = await dapi(`/channels/${ch}/messages`, tk, { method: 'POST', body: JSON.stringify(payload) });
         n++;
@@ -668,9 +757,11 @@ async function runRaider(v) {
 
 async function runInvite(v) {
   const toks = parse(v['トークン']);
-  const ch = v['チャンネルID'];
+  const gid = v['サーバーID'];
   const count = +v['生成数'] || 0;
   const inf = v['無限に生成'];
+  const ch = (await firstTextChannel(gid, toks[0]))?.id;
+  if (!ch) return log('チャンネルが見つかりません', 'warn');
   let i = 0;
   while (!STOP && (inf || i < count)) {
     for (const tk of toks) {
@@ -683,12 +774,14 @@ async function runInvite(v) {
 
 async function runWebhook(v) {
   const toks = parse(v['トークン']);
-  const ch = v['チャンネルID'];
+  const gid = v['サーバーID'];
   const content = v['メッセージ内容'] || '';
   const count = +v['送信回数'] || 1;
+  const ch = (await firstTextChannel(gid, toks[0]))?.id;
+  if (!ch) return log('チャンネルが見つかりません', 'warn');
   for (const tk of toks) {
     let wh;
-    try { wh = await dapi(`/channels/${ch}/webhooks`, tk, { method: 'POST', body: JSON.stringify({ name: v['Webhook名'] || 'spam' }) }); }
+    try { wh = await dapi(`/channels/${ch}/webhooks`, tk, { method: 'POST', body: JSON.stringify({ name: v['Webhook Name'] || 'Captain Hook' }) }); }
     catch (e) { log('Webhook作成失敗: ' + e.message, 'danger'); continue; }
     for (let i = 0; i < count && !STOP; i++) {
       try { await dapi(`/webhooks/${wh.id}/${wh.token}`, tk, { method: 'POST', body: JSON.stringify({ content }) }); }
@@ -704,10 +797,9 @@ async function runJoiner(v) {
   const raw = v['招待リンク または サーバーID'] || '';
   const code = raw.includes('discord') ? raw.split('/').pop().split('?')[0] : raw;
   const leave = v['参加後に自動退出'];
-  const limit = +v['上限'] || 0;
   let n = 0;
   for (const tk of toks) {
-    if (STOP || (limit && n >= limit)) break;
+    if (STOP) break;
     try {
       const g = await dapi(`/invites/${code}`, tk, { method: 'POST', body: '{}' });
       n++; log('参加: ' + (g.guild?.name || code), 'ok');
@@ -717,19 +809,28 @@ async function runJoiner(v) {
   log(`完了 (${n}人)`, 'ok');
 }
 
-async function runNickAvatar(v) {
+async function runProfile(v) {
   const toks = parse(v['トークン']);
-  const gid = v['サーバーID'], nick = v['新しいニックネーム'], url = v['アイコン画像URL'];
+  const name = v['表示名'], bio = v['自己紹介'], url = v['アイコン画像URL'], cstatus = v['カスタムステータス'];
+  const gid = v['サーバーID（ニックネーム用）'], nick = v['ニックネーム'];
+  const tagGid = v['ギルドタグ サーバーID'], tag = v['ギルドタグ 文字列'];
   let dataUri;
-  if (url) {
-    const blob = await (await fetch(url)).blob();
-    dataUri = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-  }
+  if (url) { const blob = await (await fetch(url)).blob(); dataUri = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); }); }
   for (const tk of toks) {
     if (STOP) break;
     try {
-      if (nick && gid) await dapi(`/guilds/${gid}/members/@me`, tk, { method: 'PATCH', body: JSON.stringify({ nick }) });
-      if (dataUri) await dapi('/users/@me', tk, { method: 'PATCH', body: JSON.stringify({ avatar: dataUri }) });
+      const body = {};
+      if (name) body.global_name = name;
+      if (bio) body.bio = bio;
+      if (dataUri) body.avatar = dataUri;
+      if (tagGid && tag) body.clan = { identity_guild_id: tagGid, identity_enabled: true, tag };
+      if (Object.keys(body).length) await dapi('/users/@me', tk, { method: 'PATCH', body: JSON.stringify(body) });
+      if (gid && nick) await dapi(`/guilds/${gid}/members/@me`, tk, { method: 'PATCH', body: JSON.stringify({ nick }) });
+      if (cstatus) {
+        const gw = await connectGateway(tk);
+        gw.send(3, { status: 'online', activities: [{ name: 'Custom Status', type: 4, state: cstatus }], since: 0, afk: false });
+        await sleep(400); gw.close();
+      }
       log('更新', 'ok');
     } catch (e) { log('失敗: ' + e.message, 'danger'); }
   }
@@ -748,25 +849,39 @@ async function runThread(v) {
 
 async function runGroup(v) {
   const toks = parse(v['トークン']);
-  const users = parse(v['相手のユーザーID']);
+  const users = parse(v['ユーザーID']);
   const content = v['メッセージ内容'] || '';
   const count = +v['送信回数'] || 1;
+  const gname = v['グループ名'], url = v['アイコン画像URL'];
+  let icon;
+  if (url) { const blob = await (await fetch(url)).blob(); icon = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); }); }
   for (const tk of toks) {
     if (STOP) break;
     try {
-      const g = await dapi('/channels', tk, { method: 'POST', body: JSON.stringify({ recipients: users }) });
+      const body = { recipients: users };
+      if (gname) body.name = gname;
+      if (icon) body.icon = icon;
+      const g = await dapi('/channels', tk, { method: 'POST', body: JSON.stringify(body) });
+      lastGroupId = g.id;
       for (let i = 0; i < count && !STOP; i++)
         await dapi(`/channels/${g.id}/messages`, tk, { method: 'POST', body: JSON.stringify({ content }) }).catch(() => {});
-      log('グループDM作成', 'ok');
-      if (v['作成後に退出']) await dapi(`/channels/${g.id}`, tk, { method: 'DELETE' });
+      log('グループ作成: ' + (gname || g.id), 'ok');
     } catch (e) { log('失敗: ' + e.message, 'danger'); }
   }
 }
 
-async function runFriend(v) {
+async function runDmSpammer(v) {
   const toks = parse(v['トークン']);
-  const users = parse(v['ユーザーID']);
+  const gid = v['サーバーID'];
+  let users = parse(v['ユーザーID']);
   const content = v['DMメッセージ'] || '';
+  if (gid) {
+    try {
+      const members = await fetchMembers(gid, toks[0]);
+      users = members;
+      log(`メンバー ${users.length}人 取得`, 'info');
+    } catch (e) { log('メンバー取得失敗: ' + e.message, 'danger'); }
+  }
   for (const tk of toks) {
     for (const u of users) {
       if (STOP) break;
@@ -781,6 +896,18 @@ async function runFriend(v) {
   }
 }
 
+async function fetchMembers(gid, tk) {
+  const ids = []; let after = '0';
+  while (!STOP) {
+    const batch = await dapi(`/guilds/${gid}/members?limit=1000&after=${after}`, tk);
+    if (!batch.length) break;
+    batch.forEach(m => { if (!m.user?.bot) ids.push(m.user.id); });
+    after = batch[batch.length - 1].user.id;
+    if (batch.length < 1000) break;
+  }
+  return ids;
+}
+
 async function runHypeSquad(v) {
   const toks = parse(v['トークン']);
   const map = { Bravery: 1, Brilliance: 2, Balance: 3 };
@@ -789,7 +916,7 @@ async function runHypeSquad(v) {
     if (STOP) break;
     try {
       if (house) { await dapi('/hypesquad/hypesquad-online', tk, { method: 'POST', body: JSON.stringify({ house_id: house }) }); log('変更', 'ok'); }
-      else { await dapi('/hypesquad/hypesquad-online', tk, { method: 'DELETE' }); log('離脱', 'ok'); }
+      else { await dapi('/hypesquad/hypesquad-online', tk, { method: 'DELETE' }); log('None', 'ok'); }
     } catch (e) { log('失敗: ' + e.message, 'danger'); }
   }
 }
@@ -797,32 +924,51 @@ async function runHypeSquad(v) {
 async function runVc(v) {
   const toks = parse(v['トークン']);
   const gid = v['サーバーID'], ch = v['ボイスチャンネルID'], count = +v['繰り返し回数'] || 1;
-  const gws = [];
-  for (const t of toks) { try { gws.push(await connectGateway(t)); } catch (e) { log('接続失敗: ' + e.message, 'danger'); } }
-  log('Gateway接続: ' + gws.length, 'info');
-  for (let i = 0; i < count && !STOP; i++) {
-    for (const gw of gws) {
-      gw.send(4, { guild_id: gid, channel_id: ch, self_mute: false, self_deaf: false });
-      await sleep(120);
-      gw.send(4, { guild_id: gid, channel_id: null });
-      await sleep(120);
+  const loop = v['繰り返し（参加⇄退出を連打）'];
+  if (vcGateways.length !== toks.length) {
+    vcGateways.forEach(i => i.gw.close());
+    vcGateways = [];
+    for (const t of toks) { try { vcGateways.push({ token: t, gw: await connectGateway(t) }); } catch (e) { log('接続失敗: ' + e.message, 'danger'); } }
+  }
+  log('Gateway接続: ' + vcGateways.length, 'info');
+  if (loop) {
+    for (let i = 0; i < count && !STOP; i++) {
+      for (const item of vcGateways) {
+        item.gw.send(4, { guild_id: gid, channel_id: ch, self_mute: false, self_deaf: false });
+        await sleep(150);
+        item.gw.send(4, { guild_id: gid, channel_id: null });
+        await sleep(150);
+      }
     }
   }
-  gws.forEach(g => g.close());
-  log('完了', 'ok');
+  for (const item of vcGateways) item.gw.send(4, { guild_id: gid, channel_id: ch, self_mute: false, self_deaf: false });
+  log('VC参加（居続け）', 'ok');
 }
 
-async function runStatus(v) {
+function buildActivity(v) {
+  const typeNum = { Playing: 0, Streaming: 1, Listening: 2, Watching: 3, Competing: 5, Custom: 4 }[v['Activity Type']] ?? 0;
+  const name = v['Activity Name'] || '';
+  const a = { name: typeNum === 4 ? 'Custom Status' : (name || '...'), type: typeNum };
+  if (typeNum === 4) { a.state = name; return a; }
+  if (typeNum === 1 && v['Stream URL']) a.url = v['Stream URL'];
+  if (v['State']) a.state = v['State'];
+  if (v['Details']) a.details = v['Details'];
+  if (+v['Party Size'] || +v['Party Max']) a.party = { size: [+v['Party Size'] || 0, +v['Party Max'] || 0] };
+  const ts = {};
+  if (+v['Timestamps Start']) ts.start = +v['Timestamps Start'] * 1000;
+  if (+v['Timestamps End']) ts.end = +v['Timestamps End'] * 1000;
+  if (Object.keys(ts).length) a.timestamps = ts;
+  if (v['Action Button']) { const b = [v['Button 1 ラベル'], v['Button 2 ラベル']].filter(Boolean); if (b.length) a.buttons = b; }
+  return a;
+}
+
+async function runStatusStart(v) {
   const toks = parse(v['トークン']);
-  const text = v['ステータステキスト'], status = v['状態'] || 'online';
-  for (const t of toks) {
-    if (STOP) break;
-    try {
-      const gw = await connectGateway(t);
-      gw.send(3, { status, activities: text ? [{ name: text, type: 0 }] : [], since: 0, afk: false });
-      await sleep(600); gw.close(); log('設定', 'ok');
-    } catch (e) { log('失敗: ' + e.message, 'danger'); }
-  }
+  const actObj = buildActivity(v);
+  const first = toks[0];
+  try { statusGw = await connectGateway(first); } catch (e) { return log('接続失敗: ' + e.message, 'danger'); }
+  statusGw.send(3, { status: 'online', activities: [actObj], since: 0, afk: false });
+  log('Start: ' + JSON.stringify(actObj), 'ok');
 }
 
 async function runSlash(v) {
@@ -832,6 +978,7 @@ async function runSlash(v) {
   const count = +v['実行回数'] || 1;
   if (!ch) return log('チャンネルIDが必要', 'warn');
   const chan = await dapi(`/channels/${ch}`, toks[0]);
+  if (chan.type === 2 && !v['ボイスチャンネルを含める']) log('※ボイスチャンネルです', 'warn');
   const idx = await dapi(`/guilds/${chan.guild_id}/application-command-index`, toks[0]);
   const cmd = (idx.application_commands || []).find(c => c.name === name);
   if (!cmd) return log('コマンドが見つかりません: ' + name, 'warn');
@@ -882,12 +1029,13 @@ async function runButton(v) {
 async function runReport(v) {
   const toks = parse(v['トークン']);
   const ch = v['チャンネルID'], mid = v['メッセージID'];
+  const reportType = Math.max(0, REPORT_TYPES.indexOf(v['通報タイプ']));
   const chan = await dapi(`/channels/${ch}`, toks[0]);
   for (const t of toks) {
     if (STOP) break;
     try {
       await dapi('/reports', t, { method: 'POST', body: JSON.stringify({
-        channel_id: ch, message_id: mid, guild_id: chan.guild_id, report_type: 0
+        channel_id: ch, message_id: mid, guild_id: chan.guild_id, report_type: reportType
       })});
       log('通報', 'ok');
     } catch (e) { log('失敗: ' + e.message, 'danger'); }
