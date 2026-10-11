@@ -48,7 +48,7 @@
   .inline input,.inline textarea,.inline select{flex:1;width:auto}
   .inline input[type=number]{max-width:120px}
 
-  /* パスワードトグル付きラッパー */
+  /* パスワードトグル付き */
   .ta-wrap{position:relative}
   .ta-wrap textarea{padding-right:38px}
   .eye{position:absolute;top:7px;right:7px;width:24px;height:24px;padding:0;background:transparent;border:none;
@@ -60,6 +60,12 @@
   .ta-wrap.masked textarea{-webkit-text-security:disc;text-security:disc}
   .ta-wrap.masked .eye .eye-on{display:none}
   .ta-wrap.masked .eye .eye-off{display:block}
+
+  /* スライダー */
+  .slider-field{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .slider-field label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
+  .slider-field input[type=range]{flex:1;width:auto;padding:0;background:transparent;border:none;accent-color:var(--blurple)}
+  .slider-field .slider-val{color:var(--text);font-size:13px;font-weight:600;min-width:20px;text-align:right}
 
   .sec{border-top:1px solid var(--line);padding-top:4px}
   .sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;font-size:13px;padding:8px 0;user-select:none}
@@ -250,24 +256,24 @@ const TOOLS = [
       {t:'area', label:'メッセージ内容', ph:'送信するメッセージを入力'},
       {t:'toggles', items:['全体メンション','メッセージのランダマイズ']},
       {t:'nums', items:[{label:'メッセージ送信間隔', val:0, unit:'秒'},{label:'メッセージ送信上限', val:0, unit:'回'}]},
+
       {t:'section', label:'メンション設定', collapsed:true},
       {t:'area', label:'メンションするユーザーID', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'btn', label:'メンション自動取得', act:'fetchMentions', style:'full'},
       {t:'text', label:'メンション取得用チャンネルID', ph:'未入力でチャンネルIDを使用'},
-      {t:'inlinebtn', label:'取得する人数', val:100, unit:'人', btn:'総数取得', act:'fetchAllMentions'},
-      {t:'inlinebtn', label:'ランダムメンションする人数', val:1, unit:'人'},
+      {t:'slider', label:'メンション上限', min:0, max:10, val:1},
+      {t:'toggle', label:'ランダムメンション'},
+
       {t:'section', label:'投票設定', collapsed:true},
       {t:'text', label:'投票 タイトル', ph:''},
       {t:'area', label:'投票 選択肢', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'select', label:'開催期間', options:POLL_DURATIONS},
       {t:'toggle', label:'即時終了'},
+
       {t:'section', label:'リプライ設定', collapsed:true},
       {t:'toggle', label:'リプライを有効にする'},
       {t:'inlinebtn', label:'取得件数', val:20, unit:'件', btn:'履歴取得', act:'fetchHistory'},
-      {t:'select', label:'リプライ先メッセージ', ph:'-- 履歴を取得してから選択 --', options:[]},
-      {t:'section', label:'オンボーディング / 認証設定', collapsed:true},
-      {t:'toggle', label:'オンボーディング & 認証を自動解決'},
-      {t:'helper', text:'有効にすると、スパム実行前に全アカウントのオンボーディングと認証を自動で完了します。'}
+      {t:'select', label:'リプライ先メッセージ', ph:'-- 履歴を取得してから選択 --', options:[]}
     ], run: runRaider },
 
   { id:'dm', icon:'friend', title:'DM Spammer', desc:'フレンド申請とDM送信を自動化します。',
@@ -408,7 +414,7 @@ const TOOLS = [
     ], run: runReport }
 ];
 
-/* ================= ルーター（?tool=xxx 形式） ================= */
+/* ================= ルーター ================= */
 function route() {
   const params = new URLSearchParams(location.search);
   const id = params.get('tool');
@@ -448,39 +454,58 @@ function showHome(q = '') {
 /* ================= フィールドHTML ================= */
 function fieldHTML(f) {
   if (f.t === 'helper') return `<div class="helper">${f.text}</div>`;
+
   if (f.t === 'toggle')
     return `<label class="tg"><span class="switch"><input type="checkbox" data-label="${f.label}"><span class="slider"></span></span><span>${f.label}</span></label>`;
+
   if (f.t === 'toggles')
     return `<div class="toggles">` + f.items.map(l =>
       `<label class="tg"><span class="switch"><input type="checkbox" data-label="${l}"><span class="slider"></span></span><span>${l}</span></label>`).join('') + `</div>`;
+
   if (f.t === 'nums')
     return `<div class="nums">` + f.items.map(n =>
       `<div class="nitem"><label>${n.label}</label><input type="number" data-label="${n.label}" value="${n.val ?? 0}"><span class="unit">${n.unit}</span></div>`).join('') + `</div>`;
+
+  if (f.t === 'slider') {
+    const mn = f.min ?? 0, mx = f.max ?? 10, v = f.val ?? 1;
+    return `<div class="slider-field">
+      <label>${f.label}</label>
+      <input type="range" data-label="${f.label}" min="${mn}" max="${mx}" value="${v}" oninput="this.nextElementSibling.textContent=this.value">
+      <span class="slider-val">${v}</span>
+    </div>`;
+  }
+
   if (f.t === 'btn')
     return `<button class="${f.style === 'full' ? 'btn-full' : 'btn-sm'}" data-act="${f.act}" style="align-self:flex-start">${f.label}</button>`;
+
   if (f.t === 'inlinebtn') {
     if (f.select) {
       const opts = (f.options || []).map(o => `<option value="${o.v}">${o.l}</option>`).join('');
-      return `<div class="inlinebtn"><label>${f.label}</label><select data-label="${f.label}" style="flex:1;width:auto">${opts}</select><button class="btn-sm" data-act="${f.act}">${f.btn}</button></div>`;
+      const btn = f.btn ? `<button class="btn-sm" data-act="${f.act}">${f.btn}</button>` : '';
+      return `<div class="inlinebtn"><label>${f.label}</label><select data-label="${f.label}" style="flex:1;width:auto">${opts}</select>${btn}</div>`;
     }
-    return `<div class="inlinebtn"><label>${f.label}</label><input type="number" data-label="${f.label}" value="${f.val ?? 0}"><span class="unit">${f.unit}</span><button class="btn-sm" data-act="${f.act}">${f.btn}</button></div>`;
+    const btn = f.btn ? `<button class="btn-sm" data-act="${f.act}">${f.btn}</button>` : '';
+    return `<div class="inlinebtn"><label>${f.label}</label><input type="number" data-label="${f.label}" value="${f.val ?? 0}"><span class="unit">${f.unit || ''}</span>${btn}</div>`;
   }
+
   if (f.t === 'select') {
     const ph = f.ph ? `<option value="" disabled selected>${f.ph}</option>` : '';
     const opts = ph + (f.options || []).map(o => `<option>${o}</option>`).join('');
     return `<div class="field"><label>${f.label}</label><select data-label="${f.label}">${opts}</select></div>`;
   }
+
   const unit = f.unit ? `<span class="unit">${f.unit}</span>` : '';
+
   if (f.t === 'area') {
     const isToken = f.label === 'トークン';
-    const input = `<textarea data-label="${f.label}" rows="3" placeholder="${f.ph || ''}">${f.val || ''}</textarea>`;
     if (isToken) {
       return `<div class="field"><label>${f.label}</label>
         <div class="ta-wrap"><textarea data-label="${f.label}" rows="4" placeholder="${f.ph || ''}">${f.val || ''}</textarea>
         <button type="button" class="eye" data-eye aria-label="表示/非表示">${EYE_ON}${EYE_OFF}</button></div></div>`;
     }
-    return `<div class="field"><label>${f.label}</label>${input}</div>`;
+    return `<div class="field"><label>${f.label}</label><textarea data-label="${f.label}" rows="3" placeholder="${f.ph || ''}">${f.val || ''}</textarea></div>`;
   }
+
   const input = f.t === 'num'
     ? `<input type="number" data-label="${f.label}" value="${f.val ?? 0}">`
     : `<input data-label="${f.label}" placeholder="${f.ph || ''}" value="${f.val || ''}">`;
@@ -571,39 +596,26 @@ async function handleBtn(act) {
   const tk = parse(v['トークン'])[0];
   if (!tk) return log('トークンを入力してください', 'warn');
 
-  if (act === 'fetchChannels') {
+  if (act === 'fetchChannels' || act === 'fetchAllChannels') {
     const gid = v['サーバーID'];
     if (!gid) return log('サーバーIDを入力してください', 'warn');
     try {
       const chs = await dapi(`/guilds/${gid}/channels`, tk);
       setVal('チャンネルID', chs.filter(c => c.type === 0 || c.type === 5).map(c => c.id).join('\n'));
-      log('チャンネル取得', 'ok');
+      log(`${act === 'fetchAllChannels' ? '全チャンネル' : 'チャンネル'} ${chs.length}件 取得`, 'ok');
     } catch (e) { log('取得失敗: ' + e.message, 'danger'); }
   }
 
-  if (act === 'fetchAllChannels') {
-    const gid = v['サーバーID'];
-    if (!gid) return log('サーバーIDを入力してください', 'warn');
-    try {
-      const chs = await dapi(`/guilds/${gid}/channels`, tk);
-      setVal('チャンネルID', chs.filter(c => c.type === 0 || c.type === 5).map(c => c.id).join('\n'));
-      log(`全チャンネル ${chs.length}件 取得`, 'ok');
-    } catch (e) { log('取得失敗: ' + e.message, 'danger'); }
-  }
-
-  if (act === 'fetchMentions' || act === 'fetchAllMentions') {
+  if (act === 'fetchMentions') {
     const ch = v['メンション取得用チャンネルID'] || parse(v['チャンネルID'])[0];
     if (!ch) return log('チャンネルIDが必要', 'warn');
-    const n = act === 'fetchAllMentions' ? 0 : (+v['取得する人数'] || 100);
     const ids = new Set(); let before;
     while (!STOP) {
-      if (n && ids.size >= n) break;
-      const q = n ? Math.min(100, n - ids.size) : 100;
-      const batch = await dapi(`/channels/${ch}/messages?limit=${q}${before ? `&before=${before}` : ''}`, tk);
+      const batch = await dapi(`/channels/${ch}/messages?limit=100${before ? `&before=${before}` : ''}`, tk);
       if (!batch.length) break;
       batch.forEach(m => m.author && ids.add(m.author.id));
       before = batch[batch.length - 1].id;
-      if (batch.length < q || !n) break;
+      if (batch.length < 100) break;
     }
     setVal('メンションするユーザーID', [...ids].join('\n'));
     log(`メンション ${ids.size}件 取得`, 'ok');
@@ -687,10 +699,8 @@ async function handleBtn(act) {
     log('VC退出', 'ok');
   }
 
-  if (act === 'statusPreview') {
-    const actObj = buildActivity(v);
-    log('Preview: ' + JSON.stringify(actObj), 'info');
-  }
+  if (act === 'statusPreview') log('Preview: ' + JSON.stringify(buildActivity(v)), 'info');
+
   if (act === 'statusReset') {
     ['Activity Name','State','Details','Stream URL','Button 1 ラベル','Button 2 ラベル'].forEach(l => setVal(l, ''));
     ['Party Size','Party Max','Timestamps Start','Timestamps End'].forEach(l => setVal(l, 0));
@@ -744,44 +754,15 @@ async function runReaction(v) {
   }
 }
 
-function mutate(s, adv) {
+function mutate(s) {
   if (!s) return s;
-  if (adv) return s.split('').map(c => Math.random() < 0.25 ? c.toUpperCase() : c).join('') + '\u200b'.repeat(1 + Math.floor(Math.random() * 3));
   return s + ' ' + Math.random().toString(36).slice(2, 7);
-}
-
-async function resolveOnboarding(tokens, guildId) {
-  for (const tk of tokens) {
-    if (STOP) break;
-    let gw;
-    try { gw = await connectGateway(tk); } catch (e) { log('接続失敗: ' + e.message, 'danger'); continue; }
-    let guild = null;
-    for (let i = 0; i < 40 && !guild; i++) { guild = gw.guilds.find(g => g.id === guildId); if (!guild) await sleep(200); }
-    if (!guild) { log('サーバー情報を取得できませんでした', 'warn'); gw.close(); continue; }
-    try {
-      const ob = guild.onboarding;
-      if (ob && ob.prompts && ob.prompts.length) {
-        const prompts = ob.prompts.map(p => ({ id: p.id, options: p.options.map(o => o.id), completed: true, in_onboarding: true, type: p.type }));
-        await dapi(`/guilds/${guildId}/onboarding`, tk, { method: 'PUT', body: JSON.stringify({ prompts, default_channel_ids: ob.default_channel_ids || [], enabled: true, mode: ob.mode ?? 0 }) });
-        log('オンボーディング解決', 'ok');
-      }
-      const ms = guild.membership_screening;
-      if (ms && ms.form_fields && ms.form_fields.length) {
-        const fields = {};
-        ms.form_fields.forEach(f => { fields[f.field_type] = (f.values && f.values[0]) || f.value || ''; });
-        await dapi(`/guilds/${guildId}/requests/@me`, tk, { method: 'PUT', body: JSON.stringify({ form_fields: fields, version: ms.version }) });
-        log('認証解決', 'ok');
-      }
-    } catch (e) { log('オンボーディング失敗: ' + e.message, 'danger'); }
-    gw.close();
-  }
 }
 
 const POLL_HOURS = { '1時間':1, '4時間':4, '8時間':8, '24時間':24, '3日':72, '1週間':168 };
 
 async function runRaider(v) {
   const toks = parse(v['トークン']);
-  const guildId = v['サーバーID'];
   const chs = parse(v['チャンネルID']);
   const base = v['メッセージ内容'] || '';
   const delay = (+v['メッセージ送信間隔'] || 0) * 1000;
@@ -789,18 +770,14 @@ async function runRaider(v) {
   const rand = v['メッセージのランダマイズ'];
   const everyone = v['全体メンション'];
   const pool = parse(v['メンションするユーザーID']);
-  const randN = +v['ランダムメンションする人数'] || 0;
+  const mentionLimit = +v['メンション上限'] || 0;
+  const randomMention = v['ランダムメンション'];
   const pollTitle = v['投票 タイトル'];
   const pollOpts = parse(v['投票 選択肢']);
   const pollEnd = v['即時終了'];
   const pollDuration = POLL_HOURS[v['開催期間']] || 24;
   const replyOn = v['リプライを有効にする'];
   const replyId = v['リプライ先メッセージ'];
-
-  if (v['オンボーディング & 認証を自動解決'] && guildId) {
-    log('オンボーディング / 認証を解決中...', 'info');
-    await resolveOnboarding(toks, guildId);
-  }
 
   let n = 0;
   outer:
@@ -810,11 +787,15 @@ async function runRaider(v) {
       let prefix = '';
       if (everyone) prefix += '@everyone ';
       if (pool.length) {
-        const shuffled = [...pool].sort(() => Math.random() - 0.5);
-        const pick = randN ? shuffled.slice(0, randN) : shuffled;
+        let pick;
+        if (randomMention) {
+          pick = [...pool].sort(() => Math.random() - 0.5).slice(0, mentionLimit || pool.length);
+        } else {
+          pick = mentionLimit ? pool.slice(0, mentionLimit) : pool;
+        }
         prefix += pick.map(id => `<@${id}>`).join(' ') + ' ';
       }
-      const content = prefix + (rand ? mutate(base, false) : base);
+      const content = prefix + (rand ? mutate(base) : base);
       const payload = { content };
       if (pollTitle && pollOpts.length)
         payload.poll = {
