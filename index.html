@@ -208,6 +208,7 @@ function injectHcCSS() {
 // オーバーレイを先に表示し、hCaptcha を解かせて token を返す
 async function solveCaptcha(sitekey, rqdata, opts = {}) {
   const invisible = !!opts.invisible;
+  const host = opts.host || 'discord.com';   // Discord の sitekey は discord.com 向け
 
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:2147483000';
@@ -238,21 +239,24 @@ async function solveCaptcha(sitekey, rqdata, opts = {}) {
     const safeGet = i => { try { return window.hcaptcha.getResponse(i) || ''; } catch (e) { return ''; } };
     const done = ok => {
       if (settled) return; settled = true;
+      clearTimeout(timer);
       try { mo.disconnect(); } catch (e) {}
       const finalToken = token || (id != null ? safeGet(id) : '');
       try { if (id != null) window.hcaptcha.remove(id); } catch (e) {}
       ov.remove();
       ok ? resolve(finalToken) : reject(new Error('hCaptcha未解決'));
     };
+    const timer = setTimeout(() => { if (!settled) { box.textContent = 'hCaptcha タイムアウト'; done(false); } }, 180000);
 
     try {
       id = window.hcaptcha.render(holder, {
         sitekey,
         rqdata: rqdata || undefined,
+        host,
         size: invisible ? 'invisible' : 'normal',
         theme: 'dark',
-        callback: t => { token = t; setTimeout(() => done(true), 80); },   // ← 引数のトークンを使う
-        'error-callback': () => { box.textContent = 'hCaptchaエラー。もう一度お試しください'; },
+        callback: t => { token = t; log('hCaptchaトークン取得 (len=' + (t ? t.length : 0) + ')', 'ok'); setTimeout(() => done(true), 80); },
+        'error-callback': () => { box.textContent = 'hCaptchaエラー。もう一度お試しください'; log('hCaptcha error-callback', 'warn'); },
         'expired-callback': () => { token = ''; box.textContent = '有効期限切れ。もう一度解いてください'; },
         'chalexpired-callback': () => { token = ''; box.textContent = 'チャレンジ期限切れ。もう一度解いてください'; }
       });
@@ -303,7 +307,6 @@ async function dapi(path, token, opts = {}) {
   // 429 レート制限
   if (res.status === 429) {
     const d = await res.json().catch(() => ({}));
-    const wait = (d.retry_after || 1) * 1000 + 60;
     throw new Error('429 レート制限 (retry_after=' + (d.retry_after || 1) + 's)');
   }
   if (res.status === 204) return null;
@@ -313,23 +316,19 @@ async function dapi(path, token, opts = {}) {
     let detail = '';
     try {
       const txt = await res.text();
-      try {
-        const j = JSON.parse(txt);
-        detail = JSON.stringify(j);
-      } catch { detail = txt; }
+      try { detail = JSON.stringify(JSON.parse(txt)); } catch { detail = txt; }
     } catch {}
     let hint = '';
     if (res.status === 400) hint = ' [リクエスト不正: ヘッダ偽装/トークン形式/招待コード不正など]';
     if (res.status === 401) hint = ' [トークン無効]';
     if (res.status === 403) hint = ' [権限不足/電話番号認証必要/サーバーBAN]';
     if (res.status === 404) hint = ' [対象が存在しない/招待コード無効]';
-    if (res.status === 429) hint = ' [レート制限]';
     throw new Error('HTTP ' + res.status + hint + ' :: ' + (detail || '(本文なし)'));
   }
   return res.json();
 }
 
-// 招待承諾（captcha 応答を握りつぶさず返す／captcha payload をヘッダーとbody両方で送る）
+// 招待承諾（captcha 解答はヘッダー＋body の両方で送る）
 async function acceptInvite(tk, code, sessionId, captcha) {
   const target = BASE + `/invites/${code}`;
   const proxyUrl = WORKER + '?url=' + encodeURIComponent(target);
@@ -344,10 +343,10 @@ async function acceptInvite(tk, code, sessionId, captcha) {
     'Accept': '*/*'
   };
   if (captcha && captcha.key) {
-    // Discord は解答をヘッダーで受け取る（bodyにも入れて両対応）
     headers['X-Captcha-Key'] = hdr(captcha.key);
-    if (captcha.sessionId) headers['X-Captcha-Session-Id'] = hdr(captcha.sessionId);
     if (captcha.rqtoken) headers['X-Captcha-Rqtoken'] = hdr(captcha.rqtoken);
+    if (captcha.rqdata) headers['X-Captcha-Rqdata'] = hdr(captcha.rqdata);
+    if (captcha.sessionId) headers['X-Captcha-Session-Id'] = hdr(captcha.sessionId);
     body.captcha_key = captcha.key;
     if (captcha.rqtoken) body.captcha_rqtoken = captcha.rqtoken;
     if (captcha.sessionId) body.captcha_session_id = captcha.sessionId;
@@ -469,7 +468,7 @@ const TOOLS = [
       {t:'btn', label:'チャンネル自動取得', act:'fetchChannels', style:'full'},
       {t:'area', label:'メッセージ内容', ph:'送信するメッセージを入力'},
       {t:'toggles', items:['全体メンション','メッセージのランダマイズ']},
-      {t:'nums', items:[{label:'メッセージ送信間隔', val:0, unit:'秒'},{label:'メッセージ送信上限', val:0, unit:'回'}]},
+      {t:'nums', items:[{label:'メッセージ送信間隔', val:0, unit:'秒'},{label:'メッセージ送信上限', val:0, unit:''}]},
 
       {t:'section', label:'メンション設定', collapsed:true},
       {t:'area', label:'メンションするユーザーID', ph:'カンマ / 改行 / スペースで区切る'},
@@ -1056,10 +1055,10 @@ async function runJoiner(v) {
       catch (e) { log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn'); skip++; continue; }
     }
 
-    // captcha は「解いて X-Captcha-Key ヘッダーを付けて再送」しないと通らない
+    // captcha は「解いて X-Captcha-* ヘッダーを付けて再送」しないと通らない
     let captcha = null;
     let done = false;
-    for (let attempt = 1; attempt <= 6 && !STOP; attempt++) {
+    for (let guard = 0; guard < 12 && !STOP; guard++) {
       const r = await acceptInvite(tk, code, sid, captcha);
       if (r.ok) {
         n++;
@@ -1073,17 +1072,24 @@ async function runJoiner(v) {
         break;
       }
       if (r.body && r.body.captcha_sitekey) {
-        log('captcha要求(' + partial + ') 試行' + attempt + ' → hCaptchaを解いてください', 'warn');
+        // 何で弾かれているか分かるようにする
+        log('captcha応答: ' + JSON.stringify(r.body.captcha_key) +
+            ' / invisible=' + !!r.body.should_serve_invisible +
+            ' / session=' + (r.body.captcha_session_id ? '有' : '無') +
+            ' / rqtoken=' + (r.body.captcha_rqtoken ? '有' : '無'), 'warn');
+        log('captcha要求(' + partial + ') 試行' + (guard + 1) + ' → hCaptchaを解いてください', 'warn');
         let token;
         try {
           token = await solveCaptcha(r.body.captcha_sitekey, r.body.captcha_rqdata, {
-            invisible: !!r.body.should_serve_invisible
+            invisible: !!r.body.should_serve_invisible,
+            host: 'discord.com'
           });
         } catch (e) { log('captcha解決失敗(' + partial + '): ' + e.message, 'danger'); break; }
-        if (!token) log('captchaトークンが空です。再試行します', 'warn');
+        log('token長: ' + (token ? token.length : 0), token ? 'info' : 'warn');
         captcha = {
           key: token,
           rqtoken: r.body.captcha_rqtoken,
+          rqdata: r.body.captcha_rqdata,
           sessionId: r.body.captcha_session_id
         };
         await sleep(300);
