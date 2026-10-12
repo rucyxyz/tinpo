@@ -176,50 +176,66 @@ const cleanToken = t => {
 const parseTokens = s => (s || '').split(/[\s,]+/).map(cleanToken).filter(Boolean);
 
 /* ================= hCaptcha ================= */
+let hcScriptLoaded = false;
 function loadHCaptcha() {
   return new Promise((res, rej) => {
     if (window.hcaptcha && window.hcaptcha.render) return res();
-    if (window.__hcLoading) { window.__hcLoading.push({ res, rej }); return; }
-    window.__hcLoading = [{ res, rej }];
-    const s = document.createElement('script');
-    s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit&onload=__hcOnload';
-    s.async = true; s.defer = true;
-    window.__hcOnload = () => { (window.__hcLoading || []).forEach(p => p.res()); window.__hcLoading = []; };
-    s.onerror = () => { (window.__hcLoading || []).forEach(p => p.rej(new Error('hCaptcha読込失敗'))); window.__hcLoading = []; };
-    document.head.appendChild(s);
+    let waited = 0;
+    const t = setInterval(() => {
+      if (window.hcaptcha && window.hcaptcha.render) { clearInterval(t); res(); }
+      else if ((waited += 100) > 15000) { clearInterval(t); rej(new Error('hCaptcha読込タイムアウト')); }
+    }, 100);
+    if (!hcScriptLoaded) {
+      hcScriptLoaded = true;
+      const s = document.createElement('script');
+      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+      s.async = true; s.defer = true;
+      s.onerror = () => { clearInterval(t); rej(new Error('hCaptcha読込失敗（ネットワーク/ブロック）')); };
+      document.head.appendChild(s);
+    }
   });
 }
 
-// hCaptcha を表示して解かせ、token を返す
+// オーバーレイを先に表示し、hCaptcha を解かせて token を返す
+// ポイント: オーバーレイに z-index を付けない（hCaptcha のチャレンジ画面が後から挿入され上に来る）
 async function solveCaptcha(sitekey, rqdata) {
-  await loadHCaptcha();
-  return new Promise((resolve, reject) => {
-    const ov = document.createElement('div');
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:99999';
-    const box = document.createElement('div');
-    box.style.cssText = 'background:#2b2d31;border:1px solid #3f4147;border-radius:10px;padding:16px 18px;color:#dbdee1;font-size:13px;text-align:center';
-    box.textContent = 'hCaptcha を解いてください（サーバー参加の認証）';
-    const holder = document.createElement('div');
-    holder.style.cssText = 'background:#fff;border-radius:6px;overflow:hidden;min-width:303px;min-height:78px';
-    ov.appendChild(box); ov.appendChild(holder);
-    document.body.appendChild(ov);
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#2b2d31;border:1px solid #3f4147;border-radius:10px;padding:14px 18px;color:#dbdee1;font-size:13px;text-align:center;max-width:360px';
+  box.textContent = 'hCaptcha を読み込み中...';
+  const holder = document.createElement('div');
+  holder.style.cssText = 'background:#fff;border-radius:8px;padding:10px 12px;';
+  ov.appendChild(box); ov.appendChild(holder);
+  document.body.appendChild(ov);
 
-    let id;
-    const done = ok => {
+  try { await loadHCaptcha(); }
+  catch (e) { box.textContent = 'hCaptcha読込失敗: ' + e.message; throw e; }
+
+  box.textContent = 'hCaptcha を解いてください（サーバー参加の認証）';
+
+  return await new Promise((resolve, reject) => {
+    let id = null;
+    const finish = ok => {
       try { if (id != null) window.hcaptcha.remove(id); } catch (e) {}
       ov.remove();
-      if (ok) resolve(window.hcaptcha.getResponse(id)); else reject(new Error('hCaptchaキャンセル/エラー'));
+      if (ok) resolve(window.hcaptcha.getResponse(id));
+      else reject(new Error('hCaptcha未解決'));
     };
     try {
       id = window.hcaptcha.render(holder, {
         sitekey,
         rqdata: rqdata || undefined,
+        size: 'normal',
         theme: 'light',
-        callback: () => setTimeout(() => done(true), 50),
-        'error-callback': () => done(false),
-        'expired-callback': () => {}
+        callback: () => setTimeout(() => finish(true), 60),
+        'error-callback': () => { box.textContent = 'hCaptchaエラー。もう一度お試しください'; },
+        'expired-callback': () => { box.textContent = 'hCaptchaの有効期限切れ。もう一度解いてください'; }
       });
-    } catch (e) { ov.remove(); reject(e); }
+    } catch (e) {
+      box.textContent = 'hCaptchaの描画に失敗: ' + e.message;
+      finish(false);
+    }
   });
 }
 
