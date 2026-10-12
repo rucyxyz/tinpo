@@ -48,7 +48,6 @@
   .inline input,.inline textarea,.inline select{flex:1;width:auto}
   .inline input[type=number]{max-width:120px}
 
-  /* パスワードトグル付き */
   .ta-wrap{position:relative}
   .ta-wrap textarea{padding-right:38px}
   .eye{position:absolute;top:7px;right:7px;width:24px;height:24px;padding:0;background:transparent;border:none;
@@ -61,7 +60,6 @@
   .ta-wrap.masked .eye .eye-on{display:none}
   .ta-wrap.masked .eye .eye-off{display:block}
 
-  /* スライダー */
   .slider-field{display:flex;align-items:center;justify-content:space-between;gap:14px}
   .slider-field label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
   .slider-field input[type=range]{flex:1;width:auto;padding:0;background:transparent;border:none;accent-color:var(--blurple)}
@@ -93,6 +91,7 @@
   .inlinebtn label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
   .inlinebtn input{width:84px}
   .helper{color:var(--muted);font-size:12px;line-height:1.55}
+  .tiny{color:var(--muted);font-size:11px;line-height:1.5;margin-top:-6px}
 
   button{font-family:inherit;cursor:pointer;border:none;border-radius:6px;font-weight:600;font-size:14px;padding:11px 14px}
   button:disabled{opacity:.5;cursor:not-allowed}
@@ -110,7 +109,7 @@
 
   .logbox{background:#141517;border:1px solid var(--line);border-radius:8px;padding:10px;
     height:180px;overflow-y:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;margin-top:16px}
-  .log-line{padding:2px 0}
+  .log-line{padding:2px 0;white-space:pre-wrap;word-break:break-all}
   .ok{color:#3ba55d}.warn{color:#faa61a}.danger{color:#ed4245}.info{color:#c3c9d6}
 </style>
 </head>
@@ -123,6 +122,10 @@
 <script>
 const BASE = 'https://discord.com/api/v10';
 const WORKER = 'https://my.dc-cors-proxy.workers.dev/';
+
+// Discord クライアント偽装用（デスクトップクライアント風）
+const X_SUPER_PROPERTIES = 'eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiRGlzY29yZCBDbGllbnQiLCJkZXZpY2UiOiIiLCJzeXN0ZW1fbG9jYWxlIjoiamEtSlAiLCJoYXNfY2xpZW50X21vZHMiOmZhbHNlLCJjbGllbnRfdmVyc2lvbiI6IjEuMC45MTk2Iiwib3NfdmVyc2lvbiI6IjEwIiwicmVmZXJyZXIiOiIiLCJyZWZlcnJpbmdfZG9tYWluIjoiIiwicmVmZXJyZXJfY3VycmVudCI6IiIsInJlZmVycmluZ19kb21haW5fY3VycmVudCI6IiIsInJlbGVhc2VfY2hhbm5lbCI6InN0YWJsZSIsImNsaWVudF9idWlsZF9udW1iZXIiOjM0MjQ4MCwiY2xpZW50X2V2ZW50X3NvdXJjZSI6bnVsbH0=';
+
 let STOP = false;
 let vcGateways = [];
 let statusGw = null;
@@ -136,20 +139,48 @@ const uid = () => Math.floor(Math.random() * 1e16).toString();
 async function dapi(path, token, opts = {}) {
   const target = BASE + path;
   const proxyUrl = WORKER + '?url=' + encodeURIComponent(target);
-  const res = await fetch(proxyUrl, {
-    ...opts,
-    headers: { 'Authorization': token, 'Content-Type': 'application/json', ...(opts.headers || {}) }
-  });
+  const headers = {
+    'Authorization': token,
+    'Content-Type': 'application/json',
+    'X-Super-Properties': X_SUPER_PROPERTIES,
+    'X-Discord-Locale': 'ja-JP',
+    'X-Discord-Timezone': 'Asia/Tokyo',
+    'Accept': '*/*',
+    'Accept-Language': 'ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7',
+    ...(opts.headers || {})
+  };
+  let res;
+  try {
+    res = await fetch(proxyUrl, { ...opts, headers });
+  } catch (e) {
+    throw new Error('ネットワーク/CORS: ' + e.message);
+  }
+
+  // 429 レート制限
   if (res.status === 429) {
     const d = await res.json().catch(() => ({}));
-    await sleep((d.retry_after || 1) * 1000 + 60);
-    return dapi(path, token, opts);
+    const wait = (d.retry_after || 1) * 1000 + 60;
+    throw new Error('429 レート制限 (retry_after=' + (d.retry_after || 1) + 's)');
   }
   if (res.status === 204) return null;
+
+  // エラー時は中身を全て出す
   if (!res.ok) {
-    let m = 'HTTP ' + res.status;
-    try { const d = await res.json(); m = d.message || m; } catch (e) {}
-    throw new Error(m);
+    let detail = '';
+    try {
+      const txt = await res.text();
+      try {
+        const j = JSON.parse(txt);
+        detail = JSON.stringify(j);
+      } catch { detail = txt; }
+    } catch {}
+    let hint = '';
+    if (res.status === 400) hint = ' [リクエスト不正: ヘッダ偽装/トークン形式/招待コード不正など]';
+    if (res.status === 401) hint = ' [トークン無効]';
+    if (res.status === 403) hint = ' [権限不足/電話番号認証必要/サーバーBAN]';
+    if (res.status === 404) hint = ' [対象が存在しない/招待コード無効]';
+    if (res.status === 429) hint = ' [レート制限]';
+    throw new Error('HTTP ' + res.status + hint + ' :: ' + (detail || '(本文なし)'));
   }
   return res.json();
 }
@@ -176,7 +207,8 @@ function connectGateway(token) {
         gw.hb = setInterval(() => ws.send(JSON.stringify({ op: 1, d: gw.seq })), p.d.heartbeat_interval);
         ws.send(JSON.stringify({ op: 2, d: {
           token, capabilities: 125, compress: false,
-          properties: { os: 'Windows', browser: 'Chrome', device: 'desktop', system_locale: 'ja-JP' }
+          properties: { os: 'Windows', browser: 'Discord Client', device: '', system_locale: 'ja-JP' },
+          client_state: { guild_versions: {}, highest_last_message_id: '0', read_state_version: 0, user_guild_settings_version: -1, user_settings_version: -1 }
         }}));
       } else if (p.op === 0) {
         gw.seq = p.s;
@@ -227,7 +259,9 @@ const TOOLS = [
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'招待リンク または サーバーID', ph:'https://discord.gg/xxxx'},
-      {t:'toggle', label:'参加後に自動退出'}
+      {t:'toggle', label:'参加後に自動退出'},
+      {t:'toggle', label:'正常実行できない場合にキャンセルする'},
+      {t:'helper', text:'サーバー参加時にアカウントのステータス取得が失敗した場合、トークンの無効化や電話番号認証の強制を防止するため処理をキャンセルします'}
     ], run: runJoiner },
 
   { id:'group', icon:'group', title:'Group DM Spammer', desc:'グループDMを大量作成してメッセージを送信します。',
@@ -456,7 +490,7 @@ function showHome(q = '') {
 
 /* ================= フィールドHTML ================= */
 function fieldHTML(f) {
-  if (f.t === 'helper') return `<div class="helper">${f.text}</div>`;
+  if (f.t === 'helper') return `<div class="tiny">${f.text}</div>`;
 
   if (f.t === 'toggle')
     return `<label class="tg"><span class="switch"><input type="checkbox" data-label="${f.label}"><span class="slider"></span></span><span>${f.label}</span></label>`;
@@ -727,7 +761,7 @@ async function runTokenChecker(v) {
       ok++;
     } catch (e) {
       if (/429|rate/i.test(e.message)) { log('制限: ' + t.slice(0, 12), 'warn'); lim++; }
-      else { log('無効: ' + t.slice(0, 12), 'danger'); bad++; }
+      else { log('無効: ' + t.slice(0, 12) + ' :: ' + e.message, 'danger'); bad++; }
     }
   }
   log(`結果 → 有効 ${ok} / 無効 ${bad} / ニトロ ${nitro} / 制限 ${lim}`, 'info');
@@ -862,16 +896,50 @@ async function runJoiner(v) {
   const raw = v['招待リンク または サーバーID'] || '';
   const code = raw.includes('discord') ? raw.split('/').pop().split('?')[0] : raw;
   const leave = v['参加後に自動退出'];
-  let n = 0;
+  const cancelOnFail = v['正常実行できない場合にキャンセルする'];
+  let n = 0, skip = 0;
   for (const tk of toks) {
     if (STOP) break;
+    const partial = tk.slice(0, 12) + '...';
+
+    // 事前にトークンが有効か確認（/users/@me）
+    if (cancelOnFail) {
+      try {
+        await dapi('/users/@me', tk);
+      } catch (e) {
+        log('スキップ(' + partial + ') トークン検証失敗: ' + e.message, 'warn');
+        skip++;
+        continue;
+      }
+      // 招待コードが有効か確認
+      try {
+        const inv = await dapi(`/invites/${code}?with_counts=true`, tk);
+        if (inv && inv.expires_at === null && inv.max_uses === 0) {
+          // 有効
+        }
+      } catch (e) {
+        log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn');
+        skip++;
+        continue;
+      }
+    }
+
     try {
-      const g = await dapi(`/invites/${code}`, tk, { method: 'POST', body: '{}' });
-      n++; log('参加: ' + (g.guild?.name || code), 'ok');
-      if (leave && g.guild?.id) await dapi(`/users/@me/guilds/${g.guild.id}`, tk, { method: 'DELETE' });
-    } catch (e) { log('失敗: ' + e.message, 'danger'); }
+      const g = await dapi(`/invites/${code}`, tk, { method: 'POST', body: JSON.stringify({ session_id: uid() }) });
+      n++;
+      log('参加(' + partial + '): ' + (g.guild?.name || code), 'ok');
+      if (leave && g.guild?.id) {
+        await sleep(800);
+        await dapi(`/users/@me/guilds/${g.guild.id}`, tk, { method: 'DELETE' });
+        log('退出(' + partial + ')', 'info');
+      }
+      // 各アカウント間で少し待機（検知回避）
+      await sleep(1500 + Math.random() * 1500);
+    } catch (e) {
+      log('失敗(' + partial + '): ' + e.message, 'danger');
+    }
   }
-  log(`完了 (${n}人)`, 'ok');
+  log(`完了 (参加 ${n}人 / スキップ ${skip}人)`, 'ok');
 }
 
 async function runProfile(v) {
