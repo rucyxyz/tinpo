@@ -123,8 +123,26 @@
 const BASE = 'https://discord.com/api/v10';
 const WORKER = 'https://my.dc-cors-proxy.workers.dev/';
 
-// Discord クライアント偽装用（デスクトップクライアント風）
-const X_SUPER_PROPERTIES = 'eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiRGlzY29yZCBDbGllbnQiLCJkZXZpY2UiOiIiLCJzeXN0ZW1fbG9jYWxlIjoiamEtSlAiLCJoYXNfY2xpZW50X21vZHMiOmZhbHNlLCJjbGllbnRfdmVyc2lvbiI6IjEuMC45MTk2Iiwib3NfdmVyc2lvbiI6IjEwIiwicmVmZXJyZXIiOiIiLCJyZWZlcnJpbmdfZG9tYWluIjoiIiwicmVmZXJyZXJfY3VycmVudCI6IiIsInJlZmVycmluZ19kb21haW5fY3VycmVudCI6IiIsInJlbGVhc2VfY2hhbm5lbCI6InN0YWJsZSIsImNsaWVudF9idWlsZF9udW1iZXIiOjM0MjQ4MCwiY2xpZW50X2V2ZW50X3NvdXJjZSI6bnVsbH0=';
+// Discord クライアント偽装用（デスクトップクライアント風・最新ビルド）
+// base64 を手書きせず実行時に生成 → ビルド番号の更新が1行で済む
+const X_SUPER_PROPERTIES = btoa(JSON.stringify({
+  os: "Windows",
+  browser: "Discord Client",
+  device: "",
+  system_locale: "ja-JP",
+  has_client_mods: false,
+  client_version: "1.0.9261",
+  os_version: "10",
+  os_arch: "x64",
+  app_arch: "x64",
+  referrer: "",
+  referring_domain: "",
+  referrer_current: "",
+  referring_domain_current: "",
+  release_channel: "stable",
+  client_build_number: 634304,
+  client_event_source: null
+}));
 
 let STOP = false;
 let vcGateways = [];
@@ -183,6 +201,32 @@ async function dapi(path, token, opts = {}) {
     throw new Error('HTTP ' + res.status + hint + ' :: ' + (detail || '(本文なし)'));
   }
   return res.json();
+}
+
+// 招待承諾（captcha 応答を握りつぶさず返す）
+async function acceptInvite(tk, code, sessionId) {
+  const target = BASE + `/invites/${code}`;
+  const proxyUrl = WORKER + '?url=' + encodeURIComponent(target);
+  let res;
+  try {
+    res = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': tk,
+        'Content-Type': 'application/json',
+        'X-Super-Properties': X_SUPER_PROPERTIES,
+        'X-Discord-Locale': 'ja-JP',
+        'X-Discord-Timezone': 'Asia/Tokyo',
+        'Accept': '*/*'
+      },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+  } catch (e) {
+    return { ok: false, netError: e.message };
+  }
+  if (res.ok) return { ok: true, data: await res.json() };
+  const body = await res.json().catch(() => ({}));
+  return { ok: false, status: res.status, body };
 }
 
 function log(msg, type = 'info') {
@@ -260,8 +304,7 @@ const TOOLS = [
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'招待リンク または サーバーID', ph:'https://discord.gg/xxxx'},
       {t:'toggle', label:'参加後に自動退出'},
-      {t:'toggle', label:'正常実行できない場合にキャンセルする'},
-      {t:'helper', text:'サーバー参加時にアカウントのステータス取得が失敗した場合、トークンの無効化や電話番号認証の強制を防止するため処理をキャンセルします'}
+      {t:'toggle', label:'正常実行できない場合にキャンセルする'}
     ], run: runJoiner },
 
   { id:'group', icon:'group', title:'Group DM Spammer', desc:'グループDMを大量作成してメッセージを送信します。',
@@ -902,42 +945,37 @@ async function runJoiner(v) {
     if (STOP) break;
     const partial = tk.slice(0, 12) + '...';
 
-    // 事前にトークンが有効か確認（/users/@me）
     if (cancelOnFail) {
-      try {
-        await dapi('/users/@me', tk);
-      } catch (e) {
-        log('スキップ(' + partial + ') トークン検証失敗: ' + e.message, 'warn');
-        skip++;
-        continue;
-      }
-      // 招待コードが有効か確認
-      try {
-        const inv = await dapi(`/invites/${code}?with_counts=true`, tk);
-        if (inv && inv.expires_at === null && inv.max_uses === 0) {
-          // 有効
-        }
-      } catch (e) {
-        log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn');
-        skip++;
-        continue;
-      }
+      try { await dapi('/users/@me', tk); }
+      catch (e) { log('スキップ(' + partial + ') トークン検証失敗: ' + e.message, 'warn'); skip++; continue; }
+      try { await dapi(`/invites/${code}?with_counts=true`, tk); }
+      catch (e) { log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn'); skip++; continue; }
     }
 
-    try {
-      const g = await dapi(`/invites/${code}`, tk, { method: 'POST', body: JSON.stringify({ session_id: uid() }) });
-      n++;
-      log('参加(' + partial + '): ' + (g.guild?.name || code), 'ok');
-      if (leave && g.guild?.id) {
-        await sleep(800);
-        await dapi(`/users/@me/guilds/${g.guild.id}`, tk, { method: 'DELETE' });
-        log('退出(' + partial + ')', 'info');
+    // captcha が出たら少し待って数回リトライ
+    let done = false;
+    for (let attempt = 1; attempt <= 4 && !STOP; attempt++) {
+      const r = await acceptInvite(tk, code, uid());
+      if (r.ok) {
+        n++;
+        log('参加(' + partial + '): ' + (r.data.guild?.name || code), 'ok');
+        if (leave && r.data.guild?.id) {
+          await sleep(800);
+          await dapi(`/users/@me/guilds/${r.data.guild.id}`, tk, { method: 'DELETE' });
+          log('退出(' + partial + ')', 'info');
+        }
+        done = true;
+        break;
       }
-      // 各アカウント間で少し待機（検知回避）
-      await sleep(1500 + Math.random() * 1500);
-    } catch (e) {
-      log('失敗(' + partial + '): ' + e.message, 'danger');
+      if (r.body && r.body.captcha_key) {
+        log('captcha要求(' + partial + ') 試行' + attempt + ': ' + JSON.stringify(r.body.captcha_key), 'warn');
+        await sleep(2000 + Math.random() * 2000);
+        continue;
+      }
+      log('失敗(' + partial + '): HTTP ' + (r.status || '') + ' :: ' + JSON.stringify(r.body || r.netError), 'danger');
+      break;
     }
+    if (done) await sleep(1500 + Math.random() * 1500);
   }
   log(`完了 (参加 ${n}人 / スキップ ${skip}人)`, 'ok');
 }
