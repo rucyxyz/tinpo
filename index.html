@@ -122,6 +122,7 @@
 
 <script>
 const BASE = 'https://discord.com/api/v10';
+const WORKER = 'https://my.dc-cors-proxy.workers.dev/';
 let STOP = false;
 let vcGateways = [];
 let statusGw = null;
@@ -133,7 +134,9 @@ const parse = s => (s || '').split(/[\s,]+/).filter(Boolean);
 const uid = () => Math.floor(Math.random() * 1e16).toString();
 
 async function dapi(path, token, opts = {}) {
-  const res = await fetch(BASE + path, {
+  const target = BASE + path;
+  const proxyUrl = WORKER + '?url=' + encodeURIComponent(target);
+  const res = await fetch(proxyUrl, {
     ...opts,
     headers: { 'Authorization': token, 'Content-Type': 'application/json', ...(opts.headers || {}) }
   });
