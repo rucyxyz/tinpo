@@ -123,7 +123,14 @@
 const BASE = 'https://discord.com/api/v10';
 const WORKER = 'https://my.dc-cors-proxy.workers.dev/';
 
-// Discord クライアント偽装用（デスクトップクライアント風・最新ビルド）
+// Discord デスクトップクライアント偽装用（User-Agent と super properties を一致させるのが重要）
+const DISCORD_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9261 Chrome/134.0.6998.205 Electron/35.3.0 Safari/537.36';
+
+const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = Math.random() * 16 | 0;
+  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+});
+
 // base64 を手書きせず実行時に生成 → ビルド番号の更新が1行で済む
 const X_SUPER_PROPERTIES = btoa(JSON.stringify({
   os: "Windows",
@@ -135,13 +142,18 @@ const X_SUPER_PROPERTIES = btoa(JSON.stringify({
   os_version: "10",
   os_arch: "x64",
   app_arch: "x64",
+  browser_user_agent: DISCORD_UA,   // ← UA と一致必須
+  browser_version: "35.3.0",
   referrer: "",
   referring_domain: "",
   referrer_current: "",
   referring_domain_current: "",
   release_channel: "stable",
   client_build_number: 634304,
-  client_event_source: null
+  client_event_source: null,
+  client_launch_id: uuid(),
+  launch_signature: uuid(),
+  client_heartbeat_session_id: uuid()
 }));
 
 let STOP = false;
@@ -161,6 +173,7 @@ async function dapi(path, token, opts = {}) {
     'Authorization': token,
     'Content-Type': 'application/json',
     'X-Super-Properties': X_SUPER_PROPERTIES,
+    'User-Agent': DISCORD_UA,
     'X-Discord-Locale': 'ja-JP',
     'X-Discord-Timezone': 'Asia/Tokyo',
     'Accept': '*/*',
@@ -215,6 +228,7 @@ async function acceptInvite(tk, code, sessionId) {
         'Authorization': tk,
         'Content-Type': 'application/json',
         'X-Super-Properties': X_SUPER_PROPERTIES,
+        'User-Agent': DISCORD_UA,
         'X-Discord-Locale': 'ja-JP',
         'X-Discord-Timezone': 'Asia/Tokyo',
         'Accept': '*/*'
