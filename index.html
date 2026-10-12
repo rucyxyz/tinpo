@@ -196,45 +196,85 @@ function loadHCaptcha() {
   });
 }
 
+// 動的に挿入されるチャレンジiframeを必ず最前面に出す
+function injectHcCSS() {
+  if (document.getElementById('hc-css')) return;
+  const st = document.createElement('style');
+  st.id = 'hc-css';
+  st.textContent = 'iframe[src*="hcaptcha.com"]{z-index:2147483647 !important}';
+  document.head.appendChild(st);
+}
+
 // オーバーレイを先に表示し、hCaptcha を解かせて token を返す
-// ポイント: オーバーレイに z-index を付けない（hCaptcha のチャレンジ画面が後から挿入され上に来る）
-async function solveCaptcha(sitekey, rqdata) {
+async function solveCaptcha(sitekey, rqdata, opts = {}) {
+  const invisible = !!opts.invisible;
+
   const ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:2147483000';
   const box = document.createElement('div');
-  box.style.cssText = 'background:#2b2d31;border:1px solid #3f4147;border-radius:10px;padding:14px 18px;color:#dbdee1;font-size:13px;text-align:center;max-width:360px';
+  box.style.cssText = 'background:#2b2d31;border:1px solid #3f4147;border-radius:10px;padding:14px 18px;color:#dbdee1;font-size:13px;text-align:center;max-width:380px';
   box.textContent = 'hCaptcha を読み込み中...';
   const holder = document.createElement('div');
-  holder.style.cssText = 'background:#fff;border-radius:8px;padding:10px 12px;';
+  holder.style.cssText = 'background:#fff;border-radius:8px;padding:10px 12px;min-height:78px;min-width:300px;display:flex;align-items:center;justify-content:center';
   ov.appendChild(box); ov.appendChild(holder);
   document.body.appendChild(ov);
+  injectHcCSS();
 
   try { await loadHCaptcha(); }
-  catch (e) { box.textContent = 'hCaptcha読込失敗: ' + e.message; throw e; }
+  catch (e) { box.textContent = 'hCaptcha読込失敗: ' + e.message; ov.remove(); throw e; }
 
-  box.textContent = 'hCaptcha を解いてください（サーバー参加の認証）';
+  box.textContent = invisible ? 'hCaptcha 認証中...' : 'hCaptcha を解いてください（サーバー参加の認証）';
+
+  // 後から body に挿入されるチャレンジ iframe を検知して最前面へ
+  const mo = new MutationObserver(ms => {
+    ms.forEach(m => m.addedNodes.forEach(n => {
+      if (n.tagName === 'IFRAME') n.style.zIndex = '2147483647';
+    }));
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
 
   return await new Promise((resolve, reject) => {
-    let id = null;
-    const finish = ok => {
+    let id = null, token = '', settled = false;
+    const safeGet = i => { try { return window.hcaptcha.getResponse(i) || ''; } catch (e) { return ''; } };
+    const done = ok => {
+      if (settled) return; settled = true;
+      try { mo.disconnect(); } catch (e) {}
+      const finalToken = token || (id != null ? safeGet(id) : '');
       try { if (id != null) window.hcaptcha.remove(id); } catch (e) {}
       ov.remove();
-      if (ok) resolve(window.hcaptcha.getResponse(id));
-      else reject(new Error('hCaptcha未解決'));
+      ok ? resolve(finalToken) : reject(new Error('hCaptcha未解決'));
     };
+
     try {
       id = window.hcaptcha.render(holder, {
         sitekey,
         rqdata: rqdata || undefined,
-        size: 'normal',
-        theme: 'light',
-        callback: () => setTimeout(() => finish(true), 60),
+        size: invisible ? 'invisible' : 'normal',
+        theme: 'dark',
+        callback: t => { token = t; setTimeout(() => done(true), 80); },   // ← 引数のトークンを使う
         'error-callback': () => { box.textContent = 'hCaptchaエラー。もう一度お試しください'; },
-        'expired-callback': () => { box.textContent = 'hCaptchaの有効期限切れ。もう一度解いてください'; }
+        'expired-callback': () => { token = ''; box.textContent = '有効期限切れ。もう一度解いてください'; },
+        'chalexpired-callback': () => { token = ''; box.textContent = 'チャレンジ期限切れ。もう一度解いてください'; }
       });
     } catch (e) {
       box.textContent = 'hCaptchaの描画に失敗: ' + e.message;
-      finish(false);
+      return done(false);
+    }
+
+    if (invisible) {
+      try { window.hcaptcha.execute(id, { async: true }); } catch (e) {}
+    } else {
+      // チェックを押してもチャレンジが出ない場合、強制的に execute する保険
+      let clicked = false;
+      holder.addEventListener('click', () => {
+        if (clicked) return; clicked = true;
+        setTimeout(() => {
+          if (settled || token) return;
+          const widget = holder.querySelector('iframe');
+          const chal = [...document.querySelectorAll('iframe[src*="hcaptcha"]')].some(f => f !== widget);
+          if (!chal) { try { window.hcaptcha.execute(id); } catch (e) {} }
+        }, 1500);
+      }, true);
     }
   });
 }
@@ -289,26 +329,32 @@ async function dapi(path, token, opts = {}) {
   return res.json();
 }
 
-// 招待承諾（captcha 応答を握りつぶさず返す／captcha payload を渡せる）
+// 招待承諾（captcha 応答を握りつぶさず返す／captcha payload をヘッダーとbody両方で送る）
 async function acceptInvite(tk, code, sessionId, captcha) {
   const target = BASE + `/invites/${code}`;
   const proxyUrl = WORKER + '?url=' + encodeURIComponent(target);
-  const body = { session_id: sessionId, ...(captcha || {}) };
+  const body = { session_id: sessionId };
+  const headers = {
+    'Authorization': hdr(tk),
+    'Content-Type': 'application/json',
+    'X-Super-Properties': X_SUPER_PROPERTIES,
+    'User-Agent': DISCORD_UA,
+    'X-Discord-Locale': 'ja-JP',
+    'X-Discord-Timezone': 'Asia/Tokyo',
+    'Accept': '*/*'
+  };
+  if (captcha && captcha.key) {
+    // Discord は解答をヘッダーで受け取る（bodyにも入れて両対応）
+    headers['X-Captcha-Key'] = hdr(captcha.key);
+    if (captcha.sessionId) headers['X-Captcha-Session-Id'] = hdr(captcha.sessionId);
+    if (captcha.rqtoken) headers['X-Captcha-Rqtoken'] = hdr(captcha.rqtoken);
+    body.captcha_key = captcha.key;
+    if (captcha.rqtoken) body.captcha_rqtoken = captcha.rqtoken;
+    if (captcha.sessionId) body.captcha_session_id = captcha.sessionId;
+  }
   let res;
   try {
-    res = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': hdr(tk),
-        'Content-Type': 'application/json',
-        'X-Super-Properties': X_SUPER_PROPERTIES,
-        'User-Agent': DISCORD_UA,
-        'X-Discord-Locale': 'ja-JP',
-        'X-Discord-Timezone': 'Asia/Tokyo',
-        'Accept': '*/*'
-      },
-      body: JSON.stringify(body)
-    });
+    res = await fetch(proxyUrl, { method: 'POST', headers, body: JSON.stringify(body) });
   } catch (e) {
     return { ok: false, netError: e.message };
   }
@@ -1010,10 +1056,10 @@ async function runJoiner(v) {
       catch (e) { log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn'); skip++; continue; }
     }
 
-    // captcha は「解いて captcha_key を付けて再送」しないと通らない
+    // captcha は「解いて X-Captcha-Key ヘッダーを付けて再送」しないと通らない
     let captcha = null;
     let done = false;
-    for (let attempt = 1; attempt <= 5 && !STOP; attempt++) {
+    for (let attempt = 1; attempt <= 6 && !STOP; attempt++) {
       const r = await acceptInvite(tk, code, sid, captcha);
       if (r.ok) {
         n++;
@@ -1029,12 +1075,16 @@ async function runJoiner(v) {
       if (r.body && r.body.captcha_sitekey) {
         log('captcha要求(' + partial + ') 試行' + attempt + ' → hCaptchaを解いてください', 'warn');
         let token;
-        try { token = await solveCaptcha(r.body.captcha_sitekey, r.body.captcha_rqdata); }
-        catch (e) { log('captcha解決失敗(' + partial + '): ' + e.message, 'danger'); break; }
+        try {
+          token = await solveCaptcha(r.body.captcha_sitekey, r.body.captcha_rqdata, {
+            invisible: !!r.body.should_serve_invisible
+          });
+        } catch (e) { log('captcha解決失敗(' + partial + '): ' + e.message, 'danger'); break; }
+        if (!token) log('captchaトークンが空です。再試行します', 'warn');
         captcha = {
-          captcha_key: token,
-          captcha_rqtoken: r.body.captcha_rqtoken,
-          captcha_session_id: r.body.captcha_session_id
+          key: token,
+          rqtoken: r.body.captcha_rqtoken,
+          sessionId: r.body.captcha_session_id
         };
         await sleep(300);
         continue;
