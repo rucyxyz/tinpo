@@ -51,17 +51,25 @@
   .ta-wrap{position:relative}
   .ta-wrap textarea{padding-right:38px}
   .eye{position:absolute;top:7px;right:7px;width:24px;height:24px;padding:0;background:transparent;border:none;
-    color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .eye svg{width:16px;height:16px}
+    color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px;
+    transition:color .12s,background .12s;font-family:inherit;font-size:14px;font-weight:400}
+  .eye:hover{color:var(--text);background:rgba(255,255,255,.06)}
+  .eye svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .eye .eye-off{display:none}
-  .masked .eye .eye-on{display:none}
-  .masked .eye .eye-off{display:block}
+  .ta-wrap.masked textarea{-webkit-text-security:disc;text-security:disc}
+  .ta-wrap.masked .eye .eye-on{display:none}
+  .ta-wrap.masked .eye .eye-off{display:block}
 
-  .sec{border:1px solid var(--line);border-radius:8px;overflow:hidden}
-  .sec-head{background:var(--bg2);padding:10px 12px;font-weight:600;cursor:pointer;display:flex;gap:8px;align-items:center;font-size:13px}
-  .sec-head .arrow{transition:.15s;font-size:10px;color:var(--muted)}
+  .slider-field{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .slider-field label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
+  .slider-field input[type=range]{flex:1;width:auto;padding:0;background:transparent;border:none;accent-color:var(--blurple)}
+  .slider-field .slider-val{color:var(--text);font-size:13px;font-weight:600;min-width:20px;text-align:right}
+
+  .sec{border-top:1px solid var(--line);padding-top:4px}
+  .sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;font-size:13px;padding:8px 0;user-select:none}
+  .sec-head .arrow{font-size:10px;color:var(--muted);transition:transform .15s}
   .sec.closed .arrow{transform:rotate(-90deg)}
-  .sec-body{padding:14px;display:flex;flex-direction:column;gap:14px}
+  .sec-body{display:flex;flex-direction:column;gap:14px;padding:4px 0 8px}
   .sec.closed .sec-body{display:none}
 
   .tg{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)}
