@@ -160,6 +160,10 @@ let vcGateways = [];
 let statusGw = null;
 let lastGroupId = null;
 
+// true=Cloudflare Worker経由 / false=Discordへ直接（captcha通過率が上がる場合あり）
+let USE_PROXY = true;
+const apiUrl = target => USE_PROXY ? (WORKER + '?url=' + encodeURIComponent(target)) : target;
+
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const parse = s => (s || '').split(/[\s,]+/).filter(Boolean);
@@ -205,19 +209,43 @@ function injectHcCSS() {
   document.head.appendChild(st);
 }
 
-// オーバーレイを先に表示し、hCaptcha を解かせて token を返す
+// オーバーレイを表示し、hCaptcha を解かせて token を返す。
+// 閉じる=このアカウントをスキップ / 全体停止=STOP
 async function solveCaptcha(sitekey, rqdata, opts = {}) {
   const invisible = !!opts.invisible;
-  const host = opts.host || 'discord.com';   // Discord の sitekey は discord.com 向け
 
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:2147483000';
+
+  const card = document.createElement('div');
+  card.style.cssText = 'position:relative;background:#2b2d31;border:1px solid #3f4147;border-radius:10px;padding:16px 18px;color:#dbdee1;font-size:13px;text-align:center;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:12px';
+
+  // ×（閉じる）
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '×';
+  closeBtn.title = '閉じる（このアカウントをスキップ）';
+  closeBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:transparent;border:none;color:#949ba4;font-size:20px;line-height:1;padding:2px 6px;cursor:pointer';
+  closeBtn.onmouseenter = () => closeBtn.style.color = '#fff';
+  closeBtn.onmouseleave = () => closeBtn.style.color = '#949ba4';
+
   const box = document.createElement('div');
-  box.style.cssText = 'background:#2b2d31;border:1px solid #3f4147;border-radius:10px;padding:14px 18px;color:#dbdee1;font-size:13px;text-align:center;max-width:380px';
   box.textContent = 'hCaptcha を読み込み中...';
+
   const holder = document.createElement('div');
   holder.style.cssText = 'background:#fff;border-radius:8px;padding:10px 12px;min-height:78px;min-width:300px;display:flex;align-items:center;justify-content:center';
-  ov.appendChild(box); ov.appendChild(holder);
+
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:8px';
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = 'スキップ';
+  skipBtn.style.cssText = 'background:#404249;color:#fff;border:none;border-radius:6px;font-size:12px;padding:7px 12px;cursor:pointer';
+  const stopBtn = document.createElement('button');
+  stopBtn.textContent = '■ 全体停止';
+  stopBtn.style.cssText = 'background:#da373c;color:#fff;border:none;border-radius:6px;font-size:12px;padding:7px 12px;cursor:pointer';
+  bar.appendChild(skipBtn); bar.appendChild(stopBtn);
+
+  card.appendChild(closeBtn); card.appendChild(box); card.appendChild(holder); card.appendChild(bar);
+  ov.appendChild(card);
   document.body.appendChild(ov);
   injectHcCSS();
 
@@ -248,11 +276,14 @@ async function solveCaptcha(sitekey, rqdata, opts = {}) {
     };
     const timer = setTimeout(() => { if (!settled) { box.textContent = 'hCaptcha タイムアウト'; done(false); } }, 180000);
 
+    closeBtn.onclick = () => done(false);
+    skipBtn.onclick = () => done(false);
+    stopBtn.onclick = () => { STOP = true; done(false); };
+
     try {
       id = window.hcaptcha.render(holder, {
         sitekey,
-        rqdata: rqdata || undefined,
-        host,
+        rqdata: rqdata || undefined,      // render でも渡す
         size: invisible ? 'invisible' : 'normal',
         theme: 'dark',
         callback: t => { token = t; log('hCaptchaトークン取得 (len=' + (t ? t.length : 0) + ')', 'ok'); setTimeout(() => done(true), 80); },
@@ -265,27 +296,29 @@ async function solveCaptcha(sitekey, rqdata, opts = {}) {
       return done(false);
     }
 
-    if (invisible) {
-      try { window.hcaptcha.execute(id, { async: true }); } catch (e) {}
-    } else {
-      // チェックを押してもチャレンジが出ない場合、強制的に execute する保険
-      let clicked = false;
-      holder.addEventListener('click', () => {
-        if (clicked) return; clicked = true;
-        setTimeout(() => {
-          if (settled || token) return;
-          const widget = holder.querySelector('iframe');
-          const chal = [...document.querySelectorAll('iframe[src*="hcaptcha"]')].some(f => f !== widget);
-          if (!chal) { try { window.hcaptcha.execute(id); } catch (e) {} }
-        }, 1500);
-      }, true);
-    }
+    // rqdata は execute 側で渡すのが確実。チェック不要でチャレンジを即開く。
+    setTimeout(() => {
+      if (settled || token) return;
+      try { window.hcaptcha.execute(id, { async: true, rqdata: rqdata || undefined }); } catch (e) {}
+    }, invisible ? 0 : 250);
+
+    // クリックしても何も起きない場合の保険
+    let clicked = false;
+    holder.addEventListener('click', () => {
+      if (clicked) return; clicked = true;
+      setTimeout(() => {
+        if (settled || token) return;
+        const widget = holder.querySelector('iframe');
+        const chal = [...document.querySelectorAll('iframe[src*="hcaptcha"]')].some(f => f !== widget);
+        if (!chal) { try { window.hcaptcha.execute(id, { rqdata: rqdata || undefined }); } catch (e) {} }
+      }, 1500);
+    }, true);
   });
 }
 
 async function dapi(path, token, opts = {}) {
   const target = BASE + path;
-  const proxyUrl = WORKER + '?url=' + encodeURIComponent(target);
+  const proxyUrl = apiUrl(target);
   const headers = {
     'Authorization': hdr(token),
     'Content-Type': 'application/json',
@@ -304,14 +337,12 @@ async function dapi(path, token, opts = {}) {
     throw new Error('ネットワーク/CORS: ' + e.message);
   }
 
-  // 429 レート制限
   if (res.status === 429) {
     const d = await res.json().catch(() => ({}));
     throw new Error('429 レート制限 (retry_after=' + (d.retry_after || 1) + 's)');
   }
   if (res.status === 204) return null;
 
-  // エラー時は中身を全て出す
   if (!res.ok) {
     let detail = '';
     try {
@@ -328,10 +359,10 @@ async function dapi(path, token, opts = {}) {
   return res.json();
 }
 
-// 招待承諾（captcha 解答はヘッダー＋body の両方で送る）
+// 招待承諾。captcha 解答はドキュメント通り「ヘッダー」で送る。
 async function acceptInvite(tk, code, sessionId, captcha) {
   const target = BASE + `/invites/${code}`;
-  const proxyUrl = WORKER + '?url=' + encodeURIComponent(target);
+  const proxyUrl = apiUrl(target);
   const body = { session_id: sessionId };
   const headers = {
     'Authorization': hdr(tk),
@@ -347,9 +378,6 @@ async function acceptInvite(tk, code, sessionId, captcha) {
     if (captcha.rqtoken) headers['X-Captcha-Rqtoken'] = hdr(captcha.rqtoken);
     if (captcha.rqdata) headers['X-Captcha-Rqdata'] = hdr(captcha.rqdata);
     if (captcha.sessionId) headers['X-Captcha-Session-Id'] = hdr(captcha.sessionId);
-    body.captcha_key = captcha.key;
-    if (captcha.rqtoken) body.captcha_rqtoken = captcha.rqtoken;
-    if (captcha.sessionId) body.captcha_session_id = captcha.sessionId;
   }
   let res;
   try {
@@ -436,8 +464,10 @@ const TOOLS = [
     fields:[
       {t:'area', label:'トークン', ph:'カンマ / 改行 / スペースで区切る'},
       {t:'text', label:'招待リンク または サーバーID', ph:'https://discord.gg/xxxx'},
+      {t:'toggle', label:'プロキシを使わず直接接続'},
       {t:'toggle', label:'参加後に自動退出'},
-      {t:'toggle', label:'正常実行できない場合にキャンセルする'}
+      {t:'toggle', label:'正常実行できない場合にキャンセルする'},
+      {t:'helper', text:'captchaで invalid-response が続く場合は「プロキシを使わず直接接続」をONにしてください。'}
     ], run: runJoiner },
 
   { id:'group', icon:'group', title:'Group DM Spammer', desc:'グループDMを大量作成してメッセージを送信します。',
@@ -1037,16 +1067,20 @@ async function runWebhook(v) {
 }
 
 async function runJoiner(v) {
+  USE_PROXY = !v['プロキシを使わず直接接続'];
   const toks = parseTokens(v['トークン']);
   const raw = v['招待リンク または サーバーID'] || '';
   const code = raw.includes('discord') ? raw.split('/').pop().split('?')[0] : raw;
   const leave = v['参加後に自動退出'];
   const cancelOnFail = v['正常実行できない場合にキャンセルする'];
   let n = 0, skip = 0;
+  log('接続方法: ' + (USE_PROXY ? 'プロキシ経由' : 'Discordへ直接'), 'info');
+
   for (const tk of toks) {
     if (STOP) break;
     const partial = tk.slice(0, 12) + '...';
     const sid = uid();
+    let badCount = 0;
 
     if (cancelOnFail) {
       try { await dapi('/users/@me', tk); }
@@ -1055,10 +1089,9 @@ async function runJoiner(v) {
       catch (e) { log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn'); skip++; continue; }
     }
 
-    // captcha は「解いて X-Captcha-* ヘッダーを付けて再送」しないと通らない
     let captcha = null;
     let done = false;
-    for (let guard = 0; guard < 12 && !STOP; guard++) {
+    for (let guard = 0; guard < 8 && !STOP; guard++) {
       const r = await acceptInvite(tk, code, sid, captcha);
       if (r.ok) {
         n++;
@@ -1072,19 +1105,25 @@ async function runJoiner(v) {
         break;
       }
       if (r.body && r.body.captcha_sitekey) {
-        // 何で弾かれているか分かるようにする
-        log('captcha応答: ' + JSON.stringify(r.body.captcha_key) +
-            ' / invisible=' + !!r.body.should_serve_invisible +
+        const ck = JSON.stringify(r.body.captcha_key || '');
+        log('captcha応答: ' + ck + ' / invisible=' + !!r.body.should_serve_invisible +
             ' / session=' + (r.body.captcha_session_id ? '有' : '無') +
             ' / rqtoken=' + (r.body.captcha_rqtoken ? '有' : '無'), 'warn');
+        if (ck.includes('invalid-response')) {
+          badCount++;
+          if (badCount === 2) log('invalid-response が続いています → そのまま試すか、必要なら「プロキシを使わず直接接続」を試してください', 'warn');
+        }
         log('captcha要求(' + partial + ') 試行' + (guard + 1) + ' → hCaptchaを解いてください', 'warn');
         let token;
         try {
           token = await solveCaptcha(r.body.captcha_sitekey, r.body.captcha_rqdata, {
-            invisible: !!r.body.should_serve_invisible,
-            host: 'discord.com'
+            invisible: !!r.body.should_serve_invisible
           });
-        } catch (e) { log('captcha解決失敗(' + partial + '): ' + e.message, 'danger'); break; }
+        } catch (e) {
+          if (STOP) break;
+          log('captchaスキップ(' + partial + '): ' + e.message, 'warn');
+          break;
+        }
         log('token長: ' + (token ? token.length : 0), token ? 'info' : 'warn');
         captcha = {
           key: token,
@@ -1092,7 +1131,7 @@ async function runJoiner(v) {
           rqdata: r.body.captcha_rqdata,
           sessionId: r.body.captcha_session_id
         };
-        await sleep(300);
+        await sleep(200);
         continue;
       }
       log('失敗(' + partial + '): HTTP ' + (r.status || '') + ' :: ' + JSON.stringify(r.body || r.netError), 'danger');
