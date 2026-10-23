@@ -17,10 +17,8 @@
   .wrap{max-width:620px;margin:0 auto;padding:32px 16px 64px}
   .hidden{display:none !important}
   h1.page-title{font-size:22px;font-weight:800;margin:0 0 16px;color:#fff}
-
   .search{width:100%;margin-bottom:18px}
   .search input{background:var(--bg2);border:1px solid var(--line)}
-
   .cards{display:flex;flex-direction:column;gap:10px}
   .card{display:flex;gap:14px;align-items:center;background:var(--bg2);border:1px solid var(--line);
     border-radius:10px;padding:14px 16px;cursor:pointer;transition:background .12s,border-color .12s}
@@ -31,12 +29,10 @@
   .card-title{font-weight:700;color:#fff;margin-bottom:3px}
   .card-desc{color:var(--muted);font-size:13px}
   .empty{color:var(--muted);text-align:center;padding:40px 0}
-
   .back{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:16px;font-family:inherit}
   .back:hover{color:var(--text)}
   .detail-title{font-size:22px;font-weight:800;color:#fff;margin:0 0 6px;text-align:center}
   .detail-desc{color:var(--muted);margin:0 0 22px;text-align:center}
-
   .form{display:flex;flex-direction:column;gap:14px}
   .field label{display:block;color:var(--text);font-size:13px;font-weight:600;margin-bottom:6px}
   .inline{display:flex;align-items:center;gap:8px}
@@ -47,7 +43,6 @@
   textarea{resize:vertical}
   .inline input,.inline textarea,.inline select{flex:1;width:auto}
   .inline input[type=number]{max-width:120px}
-
   .ta-wrap{position:relative}
   .ta-wrap textarea{padding-right:38px}
   .eye{position:absolute;top:7px;right:7px;width:24px;height:24px;padding:0;background:transparent;border:none;
@@ -59,19 +54,12 @@
   .ta-wrap.masked textarea{-webkit-text-security:disc;text-security:disc}
   .ta-wrap.masked .eye .eye-on{display:none}
   .ta-wrap.masked .eye .eye-off{display:block}
-
-  .slider-field{display:flex;align-items:center;justify-content:space-between;gap:14px}
-  .slider-field label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
-  .slider-field input[type=range]{flex:1;width:auto;padding:0;background:transparent;border:none;accent-color:var(--blurple)}
-  .slider-field .slider-val{color:var(--text);font-size:13px;font-weight:600;min-width:20px;text-align:right}
-
   .sec{border-top:1px solid var(--line);padding-top:4px}
   .sec-head{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;font-size:13px;padding:8px 0;user-select:none}
   .sec-head .arrow{font-size:10px;color:var(--muted);transition:transform .15s}
   .sec.closed .arrow{transform:rotate(-90deg)}
   .sec-body{display:flex;flex-direction:column;gap:14px;padding:4px 0 8px}
   .sec.closed .sec-body{display:none}
-
   .tg{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)}
   .switch{position:relative;flex:none;width:40px;height:22px}
   .switch input{opacity:0;width:0;height:0}
@@ -80,18 +68,15 @@
   .switch input:checked + .slider{background:var(--blurple)}
   .switch input:checked + .slider::before{transform:translateX(17px)}
   .toggles{display:flex;gap:28px;flex-wrap:wrap}
-
   .nums{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
   .nitem{display:flex;align-items:center;gap:8px}
   .nitem label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
   .nitem input{width:74px}
-
   .inlinebtn{display:flex;align-items:center;gap:10px}
   .inlinebtn label{color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
   .inlinebtn input{width:84px}
   .helper{color:var(--muted);font-size:12px;line-height:1.55}
   .tiny{color:var(--muted);font-size:11px;line-height:1.5;margin-top:-6px}
-
   button{font-family:inherit;cursor:pointer;border:none;border-radius:6px;font-weight:600;font-size:14px;padding:11px 14px}
   button:disabled{opacity:.5;cursor:not-allowed}
   .btn-run{background:var(--btn-dark);color:#fff;width:100%;margin-top:22px}
@@ -105,7 +90,6 @@
   .btn-blue{background:var(--blurple)}.btn-blue:hover{background:var(--blurple-h)}
   .btn-red{background:var(--red)}.btn-red:hover{background:var(--red-h)}
   .btn-dark{background:var(--btn-dark)}.btn-dark:hover{background:var(--btn-dark-h)}
-
   .logbox{background:#141517;border:1px solid var(--line);border-radius:8px;padding:10px;
     height:180px;overflow-y:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;margin-top:16px}
   .log-line{padding:2px 0;white-space:pre-wrap;word-break:break-all}
@@ -122,7 +106,6 @@
 const BASE = 'https://discord.com/api/v10';
 const WORKER = 'https://corsproxy.rucydev.workers.dev/';
 
-// Discord デスクトップクライアント偽装用（User-Agent と super properties を一致させるのが重要）
 const DISCORD_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9261 Chrome/134.0.6998.205 Electron/35.3.0 Safari/537.36';
 
 const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -130,29 +113,13 @@ const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => 
   return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
 });
 
-// base64 を手書きせず実行時に生成 → ビルド番号の更新が1行で済む
 const X_SUPER_PROPERTIES = btoa(JSON.stringify({
-  os: "Windows",
-  browser: "Discord Client",
-  device: "",
-  system_locale: "ja-JP",
-  has_client_mods: false,
-  client_version: "1.0.9261",
-  os_version: "10",
-  os_arch: "x64",
-  app_arch: "x64",
-  browser_user_agent: DISCORD_UA,   // ← UA と一致必須
-  browser_version: "35.3.0",
-  referrer: "",
-  referring_domain: "",
-  referrer_current: "",
-  referring_domain_current: "",
-  release_channel: "stable",
-  client_build_number: 634304,
-  client_event_source: null,
-  client_launch_id: uuid(),
-  launch_signature: uuid(),
-  client_heartbeat_session_id: uuid()
+  os: "Windows", browser: "Discord Client", device: "", system_locale: "ja-JP",
+  has_client_mods: false, client_version: "1.0.9261", os_version: "10", os_arch: "x64", app_arch: "x64",
+  browser_user_agent: DISCORD_UA, browser_version: "35.3.0",
+  referrer: "", referring_domain: "", referrer_current: "", referring_domain_current: "",
+  release_channel: "stable", client_build_number: 634304, client_event_source: null,
+  client_launch_id: uuid(), launch_signature: uuid(), client_heartbeat_session_id: uuid()
 }));
 
 let STOP = false;
@@ -160,7 +127,6 @@ let vcGateways = [];
 let statusGw = null;
 let lastGroupId = null;
 
-// true=Cloudflare Worker経由 / false=Discordへ直接（captcha通過率が上がる場合あり）
 let USE_PROXY = true;
 const apiUrl = target => USE_PROXY ? (WORKER + '?url=' + encodeURIComponent(target)) : target;
 
@@ -168,10 +134,7 @@ const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const parse = s => (s || '').split(/[\s,]+/).filter(Boolean);
 const uid = () => Math.floor(Math.random() * 1e16).toString();
-
-// ヘッダー値に使えない非 ISO-8859-1 文字（日本語など）を除去
 const hdr = v => String(v == null ? '' : v).replace(/[^\x00-\xFF]/g, '');
-// トークン抽出（ログ行に混ざっても本体を拾う／無ければ非ASCIIを除去）
 const cleanToken = t => {
   let s = String(t == null ? '' : t).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
   const m = s.match(/[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{20,}/);
@@ -200,7 +163,6 @@ function loadHCaptcha() {
   });
 }
 
-// 動的に挿入されるチャレンジiframeを必ず最前面に出す
 function injectHcCSS() {
   if (document.getElementById('hc-css')) return;
   const st = document.createElement('style');
@@ -209,8 +171,6 @@ function injectHcCSS() {
   document.head.appendChild(st);
 }
 
-// オーバーレイを表示し、hCaptcha を解かせて token を返す。
-// 閉じる=このアカウントをスキップ / 全体停止=STOP
 async function solveCaptcha(sitekey, rqdata, opts = {}) {
   const invisible = !!opts.invisible;
 
@@ -220,13 +180,10 @@ async function solveCaptcha(sitekey, rqdata, opts = {}) {
   const card = document.createElement('div');
   card.style.cssText = 'position:relative;background:#2b2d31;border:1px solid #3f4147;border-radius:10px;padding:16px 18px;color:#dbdee1;font-size:13px;text-align:center;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:12px';
 
-  // ×（閉じる）
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '×';
   closeBtn.title = '閉じる（このアカウントをスキップ）';
   closeBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:transparent;border:none;color:#949ba4;font-size:20px;line-height:1;padding:2px 6px;cursor:pointer';
-  closeBtn.onmouseenter = () => closeBtn.style.color = '#fff';
-  closeBtn.onmouseleave = () => closeBtn.style.color = '#949ba4';
 
   const box = document.createElement('div');
   box.textContent = 'hCaptcha を読み込み中...';
@@ -254,7 +211,6 @@ async function solveCaptcha(sitekey, rqdata, opts = {}) {
 
   box.textContent = invisible ? 'hCaptcha 認証中...' : 'hCaptcha を解いてください（サーバー参加の認証）';
 
-  // 後から body に挿入されるチャレンジ iframe を検知して最前面へ
   const mo = new MutationObserver(ms => {
     ms.forEach(m => m.addedNodes.forEach(n => {
       if (n.tagName === 'IFRAME') n.style.zIndex = '2147483647';
@@ -283,7 +239,7 @@ async function solveCaptcha(sitekey, rqdata, opts = {}) {
     try {
       id = window.hcaptcha.render(holder, {
         sitekey,
-        rqdata: rqdata || undefined,      // render でも渡す
+        rqdata: rqdata || undefined,
         size: invisible ? 'invisible' : 'normal',
         theme: 'dark',
         callback: t => { token = t; log('hCaptchaトークン取得 (len=' + (t ? t.length : 0) + ')', 'ok'); setTimeout(() => done(true), 80); },
@@ -296,13 +252,11 @@ async function solveCaptcha(sitekey, rqdata, opts = {}) {
       return done(false);
     }
 
-    // rqdata は execute 側で渡すのが確実。チェック不要でチャレンジを即開く。
     setTimeout(() => {
       if (settled || token) return;
       try { window.hcaptcha.execute(id, { async: true, rqdata: rqdata || undefined }); } catch (e) {}
     }, invisible ? 0 : 250);
 
-    // クリックしても何も起きない場合の保険
     let clicked = false;
     holder.addEventListener('click', () => {
       if (clicked) return; clicked = true;
@@ -339,7 +293,10 @@ async function dapi(path, token, opts = {}) {
 
   if (res.status === 429) {
     const d = await res.json().catch(() => ({}));
-    throw new Error('429 レート制限 (retry_after=' + (d.retry_after || 1) + 's)');
+    const err = new Error('429 レート制限 (retry_after=' + (d.retry_after || 1) + 's)');
+    err.status = 429;
+    err.retryAfter = d.retry_after || Number(res.headers.get('retry-after')) || 1;
+    throw err;
   }
   if (res.status === 204) return null;
 
@@ -359,7 +316,24 @@ async function dapi(path, token, opts = {}) {
   return res.json();
 }
 
-// 招待承諾。captcha 解答はドキュメント通り「ヘッダー」で送る。
+async function dapiRetry(path, token, opts = {}, maxRate = 3) {
+  let waits = 0;
+  for (;;) {
+    try { return await dapi(path, token, opts); }
+    catch (e) {
+      if (e.status === 429 && waits < maxRate) {
+        waits++;
+        const w = Math.min(e.retryAfter || 2, 30);
+        log('429 → ' + w.toFixed(1) + 's 待機して再試行', 'warn');
+        await sleep(w * 1000 + 300);
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
+// 招待承諾。captcha 解答はヘッダーで送る。429は retryAfter を返す。
 async function acceptInvite(tk, code, sessionId, captcha) {
   const target = BASE + `/invites/${code}`;
   const proxyUrl = apiUrl(target);
@@ -387,7 +361,8 @@ async function acceptInvite(tk, code, sessionId, captcha) {
   }
   if (res.ok) return { ok: true, data: await res.json() };
   const b = await res.json().catch(() => ({}));
-  return { ok: false, status: res.status, body: b };
+  const retryAfter = b.retry_after || Number(res.headers.get('retry-after')) || 2;
+  return { ok: false, status: res.status, body: b, retryAfter };
 }
 
 function log(msg, type = 'info') {
@@ -467,7 +442,8 @@ const TOOLS = [
       {t:'toggle', label:'プロキシを使わず直接接続'},
       {t:'toggle', label:'参加後に自動退出'},
       {t:'toggle', label:'正常実行できない場合にキャンセルする'},
-      {t:'helper', text:'captchaで invalid-response が続く場合は「プロキシを使わず直接接続」をONにしてください。'}
+      {t:'nums', items:[{label:'1アカウントごとの待機', val:3, unit:'秒'},{label:'captcha最大試行', val:4, unit:'回'}]},
+      {t:'helper', text:'429は retry_after 秒待って自動再試行します。BANっぽい時は待機を5〜10秒に。'}
     ], run: runJoiner },
 
   { id:'group', icon:'group', title:'Group DM Spammer', desc:'グループDMを大量作成してメッセージを送信します。',
@@ -662,10 +638,7 @@ function route() {
   if (!id || !TOOLS.some(t => t.id === id)) showHome();
   else showTool(id);
 }
-function navigate(url) {
-  history.pushState({}, '', url);
-  route();
-}
+function navigate(url) { history.pushState({}, '', url); route(); }
 window.addEventListener('popstate', route);
 
 /* ================= 一覧 ================= */
@@ -685,51 +658,38 @@ function showHome(q = '') {
       </div>`).join('') : `<div class="empty">該当するツールがありません</div>`) +
     `</div>`;
   const s = $('#search');
-  s.oninput = () => {
-    const v = s.value; showHome(v);
-    const ns = $('#search'); ns.focus(); ns.setSelectionRange(v.length, v.length);
-  };
+  s.oninput = () => { const v = s.value; showHome(v); const ns = $('#search'); ns.focus(); ns.setSelectionRange(v.length, v.length); };
   home.querySelectorAll('.card').forEach(c => c.onclick = () => navigate('?tool=' + c.dataset.id));
 }
 
 /* ================= フィールドHTML ================= */
 function fieldHTML(f) {
   if (f.t === 'helper') return `<div class="tiny">${f.text}</div>`;
-
   if (f.t === 'toggle')
     return `<label class="tg"><span class="switch"><input type="checkbox" data-label="${f.label}"><span class="slider"></span></span><span>${f.label}</span></label>`;
-
   if (f.t === 'toggles')
     return `<div class="toggles">` + f.items.map(l =>
       `<label class="tg"><span class="switch"><input type="checkbox" data-label="${l}"><span class="slider"></span></span><span>${l}</span></label>`).join('') + `</div>`;
-
   if (f.t === 'nums')
     return `<div class="nums">` + f.items.map(n =>
       `<div class="nitem"><label>${n.label}</label><input type="number" data-label="${n.label}" value="${n.val ?? 0}"><span class="unit">${n.unit}</span></div>`).join('') + `</div>`;
-
   if (f.t === 'btn')
     return `<button type="button" class="btn-${f.style || 'sm'}" data-act="${f.act}">${f.label}</button>`;
-
   if (f.t === 'inlinebtn')
     return `<div class="field"><label>${f.label}</label><div class="inlinebtn"><input type="number" data-label="${f.label}" value="${f.val ?? 0}"><span class="unit">${f.unit || ''}</span><button type="button" class="btn-sm" data-act="${f.act}">${f.btn}</button></div></div>`;
-
   if (f.t === 'select') {
     const opts = `<option value="">-- 選択 --</option>` + f.options.map(o => `<option value="${o}">${o}</option>`).join('');
     return `<div class="field"><label>${f.label}</label><select data-label="${f.label}">${opts}</select></div>`;
   }
-
   const unit = f.unit ? `<span class="unit">${f.unit}</span>` : '';
-
   if (f.t === 'area') {
-    const isToken = f.label === 'トークン';
-    if (isToken) {
+    if (f.label === 'トークン') {
       return `<div class="field"><label>${f.label}</label>
         <div class="ta-wrap"><textarea data-label="${f.label}" rows="4" placeholder="${f.ph || ''}">${f.val || ''}</textarea>
         <button type="button" class="eye" data-eye aria-label="表示/非表示">${EYE_ON}${EYE_OFF}</button></div></div>`;
     }
     return `<div class="field"><label>${f.label}</label><textarea data-label="${f.label}" rows="3" placeholder="${f.ph || ''}">${f.val || ''}</textarea></div>`;
   }
-
   const input = f.t === 'num'
     ? `<input type="number" data-label="${f.label}" value="${f.val ?? 0}">`
     : `<input data-label="${f.label}" placeholder="${f.ph || ''}" value="${f.val || ''}">`;
@@ -860,10 +820,7 @@ async function handleBtn(act) {
     try {
       const guilds = await dapi('/users/@me/guilds', tk);
       const sel = document.querySelector(`#toolForm [data-label="ギルドタグ"]`);
-      if (sel) {
-        sel.innerHTML = '<option value="">-- 選択 --</option>' +
-          guilds.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
-      }
+      if (sel) sel.innerHTML = '<option value="">-- 選択 --</option>' + guilds.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
       log(`サーバー ${guilds.length}件 取得`, 'ok');
     } catch (e) { log('取得失敗: ' + e.message, 'danger'); }
   }
@@ -897,10 +854,7 @@ async function handleBtn(act) {
       try {
         const dms = await dapi('/users/@me/channels', t);
         const groups = dms.filter(c => c.type === 3);
-        for (const g of groups) {
-          await dapi(`/channels/${g.id}`, t, { method: 'DELETE' });
-          log('退出: ' + (g.name || g.id), 'ok');
-        }
+        for (const g of groups) { await dapi(`/channels/${g.id}`, t, { method: 'DELETE' }); log('退出: ' + (g.name || g.id), 'ok'); }
         if (!groups.length) log('グループDMが見つかりません', 'warn');
       } catch (e) { log('失敗: ' + e.message, 'danger'); }
     }
@@ -910,9 +864,7 @@ async function handleBtn(act) {
     for (const item of vcGateways) item.gw.send(4, { guild_id: v['サーバーID'], channel_id: null });
     log('VC退出', 'ok');
   }
-
   if (act === 'statusPreview') log('Preview: ' + JSON.stringify(buildActivity(v)), 'info');
-
   if (act === 'statusReset') {
     ['Activity Name','State','Details','Stream URL','Button 1 ラベル','Button 2 ラベル'].forEach(l => setVal(l, ''));
     ['Party Size','Party Max','Timestamps Start','Timestamps End'].forEach(l => setVal(l, 0));
@@ -930,12 +882,12 @@ async function runTokenChecker(v) {
   let ok = 0, bad = 0, nitro = 0, lim = 0;
   for (const t of toks) {
     try {
-      const u = await dapi('/users/@me', t);
+      const u = await dapiRetry('/users/@me', t);
       if (u.premium_type && u.premium_type > 0) { log('ニトロ: ' + u.username, 'ok'); nitro++; }
       else log('有効: ' + u.username + (v['アカウント情報を表示'] ? ` (ID:${u.id})` : ''), 'ok');
       ok++;
     } catch (e) {
-      if (/429|rate/i.test(e.message)) { log('制限: ' + t.slice(0, 12), 'warn'); lim++; }
+      if (e.status === 429 || /429/.test(e.message)) { log('制限: ' + t.slice(0, 12), 'warn'); lim++; }
       else { log('無効: ' + t.slice(0, 12) + ' :: ' + e.message, 'danger'); bad++; }
     }
   }
@@ -966,11 +918,7 @@ async function runReaction(v) {
   }
 }
 
-function mutate(s) {
-  if (!s) return s;
-  return s + ' ' + Math.random().toString(36).slice(2, 7);
-}
-
+function mutate(s) { return s ? s + ' ' + Math.random().toString(36).slice(2, 7) : s; }
 const POLL_HOURS = { '1時間':1, '4時間':4, '8時間':8, '24時間':24, '3日':72, '1週間':168 };
 
 async function runRaider(v) {
@@ -1000,22 +948,14 @@ async function runRaider(v) {
       if (everyone) prefix += '@everyone ';
       if (pool.length) {
         let pick;
-        if (randomMention) {
-          pick = [...pool].sort(() => Math.random() - 0.5).slice(0, mentionLimit || pool.length);
-        } else {
-          pick = mentionLimit ? pool.slice(0, mentionLimit) : pool;
-        }
+        if (randomMention) pick = [...pool].sort(() => Math.random() - 0.5).slice(0, mentionLimit || pool.length);
+        else pick = mentionLimit ? pool.slice(0, mentionLimit) : pool;
         prefix += pick.map(id => `<@${id}>`).join(' ') + ' ';
       }
       const content = prefix + (rand ? mutate(base) : base);
       const payload = { content };
       if (pollTitle && pollOpts.length)
-        payload.poll = {
-          question: { text: pollTitle },
-          answers: pollOpts.map(o => ({ poll_media: { text: o } })),
-          duration: pollDuration,
-          allow_multiselect: false
-        };
+        payload.poll = { question: { text: pollTitle }, answers: pollOpts.map(o => ({ poll_media: { text: o } })), duration: pollDuration, allow_multiselect: false };
       if (replyOn && replyId) payload.message_reference = { message_id: replyId, type: 0 };
       try {
         const sent = await dapi(`/channels/${ch}/messages`, tk, { method: 'POST', body: JSON.stringify(payload) });
@@ -1066,6 +1006,7 @@ async function runWebhook(v) {
   log('完了', 'ok');
 }
 
+/* ============ Joiner（429対応 + キャンセル機能） ============ */
 async function runJoiner(v) {
   USE_PROXY = !v['プロキシを使わず直接接続'];
   const toks = parseTokens(v['トークン']);
@@ -1073,26 +1014,33 @@ async function runJoiner(v) {
   const code = raw.includes('discord') ? raw.split('/').pop().split('?')[0] : raw;
   const leave = v['参加後に自動退出'];
   const cancelOnFail = v['正常実行できない場合にキャンセルする'];
+  const perWait = (+v['1アカウントごとの待機'] || 0) * 1000;
+  const maxTry = Math.max(1, +v['captcha最大試行'] || 4);
   let n = 0, skip = 0;
-  log('接続方法: ' + (USE_PROXY ? 'プロキシ経由' : 'Discordへ直接'), 'info');
+  log('接続: ' + (USE_PROXY ? 'プロキシ経由' : 'Discordへ直接') + ' / アカウント間隔 ' + (perWait / 1000) + 's', 'info');
 
   for (const tk of toks) {
     if (STOP) break;
     const partial = tk.slice(0, 12) + '...';
     const sid = uid();
-    let badCount = 0;
+    let bad = 0, rateWaits = 0, tries = 0;
 
+    // 事前チェック（キャンセル機能有効時のみ）
     if (cancelOnFail) {
-      try { await dapi('/users/@me', tk); }
-      catch (e) { log('スキップ(' + partial + ') トークン検証失敗: ' + e.message, 'warn'); skip++; continue; }
-      try { await dapi(`/invites/${code}?with_counts=true`, tk); }
-      catch (e) { log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn'); skip++; continue; }
+      let okTok = true;
+      try { await dapiRetry('/users/@me', tk); }
+      catch (e) { log('スキップ(' + partial + ') トークン検証失敗: ' + e.message, 'warn'); skip++; okTok = false; }
+      if (okTok) {
+        try { await dapiRetry(`/invites/${code}?with_counts=true`, tk); }
+        catch (e) { log('スキップ(' + partial + ') 招待コード検証失敗: ' + e.message, 'warn'); skip++; okTok = false; }
+      }
+      if (!okTok) continue;
     }
 
-    let captcha = null;
-    let done = false;
-    for (let guard = 0; guard < 8 && !STOP; guard++) {
+    let captcha = null, done = false;
+    while (!STOP) {
       const r = await acceptInvite(tk, code, sid, captcha);
+
       if (r.ok) {
         n++;
         log('参加(' + partial + '): ' + (r.data.guild?.name || code), 'ok');
@@ -1104,16 +1052,29 @@ async function runJoiner(v) {
         done = true;
         break;
       }
+
+      // 429 → retry_after 秒待って同じアカウントを再試行
+      if (r.status === 429) {
+        if (++rateWaits > 5) { log('429が続くためキャンセル(' + partial + ')', 'warn'); skip++; break; }
+        const w = Math.min(r.retryAfter || 2, 30);
+        log('429 レート制限 → ' + w.toFixed(1) + 's 待機して再試行(' + partial + ')', 'warn');
+        await sleep(w * 1000 + 300);
+        continue;
+      }
+      rateWaits = 0;
+
       if (r.body && r.body.captcha_sitekey) {
+        tries++;
+        if (tries > maxTry) { log('captcha試行上限でキャンセル(' + partial + ')', 'warn'); skip++; break; }
         const ck = JSON.stringify(r.body.captcha_key || '');
         log('captcha応答: ' + ck + ' / invisible=' + !!r.body.should_serve_invisible +
             ' / session=' + (r.body.captcha_session_id ? '有' : '無') +
             ' / rqtoken=' + (r.body.captcha_rqtoken ? '有' : '無'), 'warn');
         if (ck.includes('invalid-response')) {
-          badCount++;
-          if (badCount === 2) log('invalid-response が続いています → そのまま試すか、必要なら「プロキシを使わず直接接続」を試してください', 'warn');
+          bad++;
+          if (bad >= 3 && cancelOnFail) { log('invalid-response が続くためキャンセル(' + partial + ')', 'warn'); skip++; break; }
         }
-        log('captcha要求(' + partial + ') 試行' + (guard + 1) + ' → hCaptchaを解いてください', 'warn');
+        log('captcha要求(' + partial + ') 試行' + tries + ' → hCaptchaを解いてください', 'warn');
         let token;
         try {
           token = await solveCaptcha(r.body.captcha_sitekey, r.body.captcha_rqdata, {
@@ -1121,8 +1082,7 @@ async function runJoiner(v) {
           });
         } catch (e) {
           if (STOP) break;
-          log('captchaスキップ(' + partial + '): ' + e.message, 'warn');
-          break;
+          log('captchaスキップ(' + partial + ')', 'warn'); skip++; break;
         }
         log('token長: ' + (token ? token.length : 0), token ? 'info' : 'warn');
         captcha = {
@@ -1131,15 +1091,18 @@ async function runJoiner(v) {
           rqdata: r.body.captcha_rqdata,
           sessionId: r.body.captcha_session_id
         };
-        await sleep(200);
+        await sleep(500);   // 連打防止
         continue;
       }
+
       log('失敗(' + partial + '): HTTP ' + (r.status || '') + ' :: ' + JSON.stringify(r.body || r.netError), 'danger');
+      if (cancelOnFail) skip++;
       break;
     }
-    if (done) await sleep(1500 + Math.random() * 1500);
+
+    if (done && perWait) await sleep(perWait);
   }
-  log(`完了 (参加 ${n}人 / スキップ ${skip}人)`, 'ok');
+  log(`完了 (参加 ${n}人 / スキップ ${skip}人)`, 'info');
 }
 
 async function runProfile(v) {
@@ -1215,10 +1178,8 @@ async function runDmSpammer(v) {
   let users = parse(v['ユーザーID']);
   const content = v['DMメッセージ'] || '';
   if (gid) {
-    try {
-      users = await fetchMembers(gid, toks[0]);
-      log(`メンバー ${users.length}人 取得`, 'info');
-    } catch (e) { log('メンバー取得失敗: ' + e.message, 'danger'); }
+    try { users = await fetchMembers(gid, toks[0]); log(`メンバー ${users.length}人 取得`, 'info'); }
+    catch (e) { log('メンバー取得失敗: ' + e.message, 'danger'); }
   }
   for (const tk of toks) {
     for (const u of users) {
@@ -1303,8 +1264,7 @@ function buildActivity(v) {
 async function runStatusStart(v) {
   const toks = parseTokens(v['トークン']);
   const actObj = buildActivity(v);
-  const first = toks[0];
-  try { statusGw = await connectGateway(first); } catch (e) { return log('接続失敗: ' + e.message, 'danger'); }
+  try { statusGw = await connectGateway(toks[0]); } catch (e) { return log('接続失敗: ' + e.message, 'danger'); }
   statusGw.send(3, { status: 'online', activities: [actObj], since: 0, afk: false });
   log('Start: ' + JSON.stringify(actObj), 'ok');
 }
@@ -1343,9 +1303,7 @@ async function runReport(v) {
   for (const t of toks) {
     if (STOP) break;
     try {
-      await dapi('/reports', t, { method: 'POST', body: JSON.stringify({
-        channel_id: ch, message_id: mid, guild_id: chan.guild_id, report_type: reportType
-      })});
+      await dapi('/reports', t, { method: 'POST', body: JSON.stringify({ channel_id: ch, message_id: mid, guild_id: chan.guild_id, report_type: reportType }) });
       log('通報', 'ok');
     } catch (e) { log('失敗: ' + e.message, 'danger'); }
   }
